@@ -52,6 +52,10 @@ publishing benchmark claims. Avoid selecting thresholds on the test set.
 
 ## Delivery milestones
 
+The ordered next-step plan and acceptance criteria are in [roadmap.md](roadmap.md).
+UX progress visibility and readability are the first active milestone.
+
+
 - [x] Backend contract, registry and two selectable adapter configurations.
 - [x] Profile compatibility enforcement, atomic profile writes and input validation.
 - [x] Overlap-preserving reports and initial run provenance.

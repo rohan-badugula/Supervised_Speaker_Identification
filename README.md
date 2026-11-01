@@ -105,6 +105,18 @@ See [local workbench architecture](docs/workbench.md) for the API and verificati
 boundary. The older standalone labeling tool remains in `tools/clip_labeler/` for
 R&D; the workbench is the integrated workflow.
 
+## Learning mode and delivery plan
+
+Anonymous analysis performs diarization/clustering without our identity labels at
+inference time, using pretrained networks. Saved-profile mode adds labeled voice
+enrollment for identity matching; it does not currently train model weights.
+The end-to-end system is therefore not wholly unsupervised training.
+
+The [ordered roadmap](docs/roadmap.md) prioritizes UX visibility and readability,
+then workflow/review usability, trustworthy evaluation data, benchmarks, targeted
+training experiments, reliability and delivery. We work through these one milestone
+at a time; current accuracy claims require measured evidence.
+
 ## Approach and model selection
 
 The initial backend is

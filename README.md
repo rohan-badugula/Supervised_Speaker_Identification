@@ -55,6 +55,21 @@ play/pause, ten-second jumps, scrubbing, speed and video fullscreen. Run setting
 open in a separate dialog. The archive, reference room, voice bank and run history
 are available from the top navigation; smaller screens stack the editor panels.
 
+For a quick test of a long meeting, open **Configure run → Analysis range**.
+Choose Full recording, the first 5/10/15/30 minutes, the first hour, or a custom
+section with a start and length in minutes. **Start a 10-minute preview here**
+uses the current playback position. Full recording remains the default.
+
+Only the selected section is extracted and sent to the model. The original video
+is unchanged, and output timestamps are offset back to the original recording.
+For example, a five-minute section starting at minute 20 produces timestamps from
+20:00 to 25:00. Reports explicitly mark partial runs and record the actual decoded
+range; the rest of the video is unprocessed, not classified as silence. Bounds
+longer than the remaining recording stop at the end of the source. Start at zero
+with Full recording for an unlimited run; a zero-length section is rejected.
+Anonymous Person 1/2 labels can change between preview sections or runs; use saved
+voice profiles when comparing identities across them.
+
 Upload progress reports transferred bytes. Background jobs show processing stages,
 not an estimated inference percentage. One CPU worker processes jobs in order,
 with at most four active/queued jobs. Interrupted jobs are marked after restart;

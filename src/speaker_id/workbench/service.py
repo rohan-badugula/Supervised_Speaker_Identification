@@ -16,7 +16,7 @@ import numpy as np
 
 from ..backends import MODEL_SPECS, get_model, load_backend
 from ..matching import centroid
-from ..media import convert_to_wav, require_ffmpeg
+from ..media import AnalysisRange, convert_to_wav, require_ffmpeg, wav_duration
 from ..pipeline import identify_speakers, resolve_token
 from ..profiles import ProfileBundle, load_profiles, save_profiles
 from ..provenance import package_versions, sha256_file
@@ -127,6 +127,12 @@ class Workbench:
                     raise ValueError("Collection name must contain 1–100 characters.")
                 job["collection_name"] = name
             else:
+                window = AnalysisRange(float(payload.get("start_seconds", 0)),
+                                       float(payload["duration_seconds"]) if payload.get("duration_seconds") is not None else None)
+                if media.get("duration") and window.start_seconds >= media["duration"]:
+                    raise ValueError("Analysis start must be before the end of the recording.")
+                job["start_seconds"] = window.start_seconds
+                job["duration_seconds"] = window.duration_seconds
                 identity = payload.get("collection_id")
                 if identity:
                     collection = self.store.get("collection", str(identity))
@@ -214,27 +220,41 @@ class Workbench:
         self._update(job["id"], collection_id=collection_id)
 
     def _identify(self, job, backend, source):
-        self._update(job["id"], stage="Converting audio and analyzing speakers")
+        window = AnalysisRange(job.get("start_seconds", 0), job.get("duration_seconds"))
+        self._update(job["id"], stage="Converting audio and analyzing speakers" if window.is_full else
+                     "Extracting selected range and analyzing speakers")
         options = {key: job.get(key) for key in ("min_speakers", "max_speakers")}
+        range_options = {} if window.is_full else {
+            "start_seconds": window.start_seconds, "duration_seconds": window.duration_seconds,
+        }
         if job.get("collection_id"):
             collection = self.store.get("collection", job["collection_id"])
             profile_path = self.store.path(collection["path"])
             report = identify_speakers(backend, source, load_profiles(profile_path),
-                                      threshold=job["threshold"], minimum_margin=job["margin"], **options)
+                                      threshold=job["threshold"], minimum_margin=job["margin"], **options, **range_options)
             report["profiles_sha256"] = sha256_file(profile_path)
         else:
             with tempfile.TemporaryDirectory(prefix="voice-meeting-") as directory:
-                output = backend.diarize(convert_to_wav(source, Path(directory) / "audio.wav"), **options)
+                wav_path = convert_to_wav(source, Path(directory) / "audio.wav", **range_options)
+                processed_seconds = None if window.is_full else wav_duration(wav_path)
+                if processed_seconds is not None and processed_seconds <= 0:
+                    raise ValueError("The selected range contains no audio. Choose an earlier start time.")
+                output = backend.diarize(wav_path, **options)
             # Stable within this recording only, ordered by first appearance.
             names = {}
             segments = []
             for turn in sorted(output.turns, key=lambda item: (item.start, item.end, item.cluster)):
+                end = min(turn.end, processed_seconds) if processed_seconds is not None else turn.end
+                if end <= turn.start:
+                    continue
                 names.setdefault(turn.cluster, f"Person {len(names) + 1}")
-                segments.append({"start": round(turn.start, 3), "end": round(turn.end, 3),
-                                 "duration": round(turn.end - turn.start, 3), "cluster": turn.cluster,
+                segments.append({"start": round(turn.start + window.start_seconds, 3),
+                                 "end": round(end + window.start_seconds, 3),
+                                 "duration": round(end - turn.start, 3), "cluster": turn.cluster,
                                  "speaker": names[turn.cluster], "similarity": None, "margin": None})
             report = {"schema_version": 2, "model": backend.model_id, "segments": segments,
-                      "summary_seconds": build_summary(segments), "mode": "anonymous"}
+                      "summary_seconds": build_summary(segments), "mode": "anonymous",
+                      "analysis_range": window.metadata(processed_seconds)}
         report.update(media_id=job["media_id"], job_id=job["id"], source_sha256=sha256_file(source))
         report.setdefault("mode", "identified")
         report["configuration"] = {"model": asdict(get_model(job["model"])), "device": "cpu",

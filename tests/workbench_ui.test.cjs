@@ -61,3 +61,30 @@ test('Errors outside the run dialog use the page alert', () => {
   assert.equal(elements.get('error-banner').hidden, false);
   assert.equal(elements.get('error-text').textContent, 'Upload failed.');
 });
+
+test('Preview presets and custom ranges send seconds to the server', () => {
+  const {context, elements} = app();
+  vm.runInContext("state.media = {duration:3600}", context);
+  elements.get('analysis-duration').value = '600';
+  assert.deepEqual(JSON.parse(vm.runInContext('JSON.stringify(selectedRange())', context)),
+    {start_seconds:0, duration_seconds:600});
+  elements.get('analysis-duration').value = 'custom';
+  elements.get('analysis-start').value = '5';
+  elements.get('analysis-length').value = '10';
+  assert.deepEqual(JSON.parse(vm.runInContext('JSON.stringify(selectedRange())', context)),
+    {start_seconds:300, duration_seconds:600});
+  elements.get('analysis-length').value = '0';
+  assert.throws(() => vm.runInContext('selectedRange()', context), /greater than zero/);
+});
+
+test('Custom ranges can start at the playhead and previews are labeled', () => {
+  const {context, elements} = app();
+  vm.runInContext("state.media = {duration:3600}", context);
+  elements.get('player').currentTime = 1500;
+  elements.get('range-from-playhead').onclick();
+  assert.equal(elements.get('analysis-duration').value, 'custom');
+  assert.match(elements.get('analysis-range-hint').textContent, /25:00–35:00/);
+  vm.runInContext('showAnalysisScope({analysis_range:{start_seconds:1500,end_seconds:2100,full_recording:false}})', context);
+  assert.equal(elements.get('analysis-scope').hidden, false);
+  assert.match(elements.get('analysis-scope').textContent, /rest has not been analyzed/);
+});

@@ -2,10 +2,41 @@ from __future__ import annotations
 
 import shutil
 import subprocess
+import math
+import wave
+from dataclasses import dataclass
 from pathlib import Path
 
 
 SUPPORTED_MEDIA = {".wav", ".flac", ".mp3", ".m4a", ".aac", ".ogg", ".mp4", ".mov", ".mkv", ".webm"}
+
+
+@dataclass(frozen=True)
+class AnalysisRange:
+    start_seconds: float = 0.0
+    duration_seconds: float | None = None
+
+    def __post_init__(self):
+        if not math.isfinite(self.start_seconds) or self.start_seconds < 0:
+            raise ValueError("Analysis start must be finite and at least zero.")
+        if self.duration_seconds is not None and (
+            not math.isfinite(self.duration_seconds) or self.duration_seconds <= 0
+        ):
+            raise ValueError("Analysis duration must be finite and greater than zero. Choose Full recording for no limit.")
+
+    @property
+    def is_full(self):
+        return self.start_seconds == 0 and self.duration_seconds is None
+
+    def metadata(self, actual_duration=None):
+        return {"start_seconds": self.start_seconds, "duration_seconds": actual_duration,
+                "end_seconds": self.start_seconds + actual_duration if actual_duration is not None else None,
+                "requested_duration_seconds": self.duration_seconds, "full_recording": self.is_full}
+
+
+def wav_duration(path: Path) -> float:
+    with wave.open(str(path), "rb") as audio:
+        return audio.getnframes() / audio.getframerate()
 
 
 def require_ffmpeg() -> str:
@@ -22,7 +53,9 @@ def require_ffmpeg() -> str:
         ) from error
 
 
-def convert_to_wav(source: Path, destination: Path) -> Path:
+def convert_to_wav(source: Path, destination: Path, *, start_seconds: float = 0,
+                   duration_seconds: float | None = None) -> Path:
+    window = AnalysisRange(start_seconds, duration_seconds)
     source = source.expanduser().resolve()
     destination = destination.expanduser().resolve()
     if not source.is_file():
@@ -37,8 +70,15 @@ def convert_to_wav(source: Path, destination: Path) -> Path:
         "-loglevel",
         "error",
         "-y",
-        "-i",
-        str(source),
+    ]
+    # Seek while decoding and limit extraction, so preview runs do not process
+    # the rest of an hour-long recording before reaching the model.
+    if window.start_seconds:
+        command.extend(["-ss", str(window.start_seconds)])
+    command.extend(["-i", str(source)])
+    if window.duration_seconds is not None:
+        command.extend(["-t", str(window.duration_seconds)])
+    command.extend([
         "-vn",
         "-ac",
         "1",
@@ -47,6 +87,6 @@ def convert_to_wav(source: Path, destination: Path) -> Path:
         "-c:a",
         "pcm_s16le",
         str(destination),
-    ]
+    ])
     subprocess.run(command, check=True)
     return destination

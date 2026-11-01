@@ -169,3 +169,32 @@ a rejected Analyze request, checking alert visibility and focus inside the dialo
 Real packaged FFmpeg conversion and imports of torch, torchaudio, pyannote.audio
 and TorchCodec were checked in the project environment. The initial model download
 and actual speaker inference remain blocked until Hugging Face access is configured.
+
+
+## Bounded analysis runs
+
+Identification requests optionally accept start_seconds (default zero) and
+duration_seconds (default null, meaning no duration limit). The job snapshots
+these settings before queueing. Start must be nonnegative and duration, when
+provided, strictly positive and finite. A known recording duration also rejects
+starts at or beyond the source end. Enrollment continues to use the saved
+reference clips; the range selector applies only to meeting analysis.
+
+FFmpeg uses input seeking and a duration limit to extract a temporary WAV for
+only the selected section. Both the shared named-identification pipeline and
+anonymous path use these extraction options. For partial runs the decoded WAV's
+frame count supplies the actual analysis duration, including clips shorter than
+requested at the source end. Output speaker turns are clamped to that duration
+and offset by the selected start. JSON includes analysis_range with original
+start/end, actual duration, requested duration and a full-recording flag.
+
+The editor keeps the original media and full-length timeline, displays a preview
+scope notice, and distinguishes ranges in run history. Regions outside a partial
+run have no predictions. Anonymous speaker numbering restarts by first appearance
+in each analyzed section; it is not identity continuity across excerpts.
+
+Validation: 66 Python tests and five Node UI tests pass. Coverage includes invalid
+ranges, precise FFmpeg seek/duration arguments, real bounded audio extraction,
+named/anonymous original-time offsets, overlapping turns, actual end-of-file
+bounds, presets and playhead selection. Model accuracy on partial recordings is
+not established by these tests.

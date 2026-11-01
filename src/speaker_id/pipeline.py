@@ -12,7 +12,7 @@ import numpy as np
 
 from .backends import Backend
 from .matching import centroid, match_embedding
-from .media import SUPPORTED_MEDIA, convert_to_wav
+from .media import SUPPORTED_MEDIA, AnalysisRange, convert_to_wav, wav_duration
 from .profiles import ProfileBundle
 from .reporting import build_summary
 
@@ -78,7 +78,10 @@ def identify_speakers(
     minimum_margin: float = 0.08,
     min_speakers: int | None = None,
     max_speakers: int | None = None,
+    start_seconds: float = 0,
+    duration_seconds: float | None = None,
 ) -> dict[str, Any]:
+    window = AnalysisRange(start_seconds, duration_seconds)
     if backend.model_id != profiles.model_id:
         raise ValueError(
             f"Profile model {profiles.model_id!r} does not match selected backend "
@@ -93,7 +96,13 @@ def identify_speakers(
     started_at = datetime.now(timezone.utc).isoformat()
     started = perf_counter()
     with tempfile.TemporaryDirectory(prefix="voice-id-target-") as temp_dir:
-        wav_path = convert_to_wav(source, Path(temp_dir) / "target.wav")
+        range_options = {} if window.is_full else {
+            "start_seconds": window.start_seconds, "duration_seconds": window.duration_seconds,
+        }
+        wav_path = convert_to_wav(source, Path(temp_dir) / "target.wav", **range_options)
+        processed_seconds = None if window.is_full else wav_duration(wav_path)
+        if processed_seconds is not None and processed_seconds <= 0:
+            raise ValueError("The selected range contains no audio. Choose an earlier start time.")
         output = backend.diarize(wav_path, min_speakers=min_speakers, max_speakers=max_speakers)
 
     cluster_matches = {
@@ -108,13 +117,16 @@ def identify_speakers(
 
     segments: list[dict[str, Any]] = []
     for turn in sorted(output.turns, key=lambda item: (item.start, item.end, item.cluster)):
+        end = min(turn.end, processed_seconds) if processed_seconds is not None else turn.end
+        if end <= turn.start:
+            continue
         cluster = turn.cluster
         match = cluster_matches.get(cluster)
         segments.append(
             {
-                "start": round(float(turn.start), 3),
-                "end": round(float(turn.end), 3),
-                "duration": round(float(turn.end - turn.start), 3),
+                "start": round(float(turn.start + window.start_seconds), 3),
+                "end": round(float(end + window.start_seconds), 3),
+                "duration": round(float(end - turn.start), 3),
                 "speaker": match.speaker if match else "UNKNOWN",
                 "cluster": str(cluster),
                 "similarity": round(match.similarity, 4) if match else None,
@@ -124,6 +136,7 @@ def identify_speakers(
 
     return {
         "schema_version": 2,
+        "analysis_range": window.metadata(processed_seconds),
         "run": {
             "id": str(uuid4()),
             "started_at": started_at,

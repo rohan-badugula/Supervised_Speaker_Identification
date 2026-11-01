@@ -59,6 +59,7 @@
           </section>
           <section class="timeline-panel" aria-label="Speaker timeline">
             <div class="panel-heading"><div><span class="section-index">01 /</span><h3>Speaker tracks</h3></div><label class="zoom-label">− <input id="timeline-zoom" type="range" min="1" max="16" value="1" step="1" aria-label="Timeline zoom"> +</label></div>
+            <p id="analysis-scope" class="analysis-scope" role="status" hidden></p>
             <p id="timeline-description" class="timeline-description">Click a segment to jump to that moment.</p>
             <div id="timeline-scroll" class="timeline-scroll"><div id="timeline" class="timeline"></div></div>
             <div id="speaker-summary" class="speaker-summary"></div>
@@ -94,7 +95,25 @@
     <div class="dialog-header"><div><span class="eyebrow">PROCESSING DESK</span><h2 id="run-title">Configure this run</h2></div><button id="close-run" class="icon-button" aria-label="Close run settings">×</button></div>
     <div class="run-panel">
       <label>Model configuration<select id="model-select"></select></label><p class="field-hint" id="model-hint"></p>
-      <div id="meeting-options"><label>Saved voice collection<select id="collection-select"><option value="">Anonymous · no saved profiles</option></select></label><p class="field-hint">Choose a collection to recognize familiar voices. Anonymous labels belong to this recording only.</p><details class="advanced"><summary>Matching & speaker bounds</summary><div class="clip-fields"><label>Similarity threshold<input id="threshold" type="number" min="-1" max="1" step="0.01" value="0.55"></label><label>Match margin<input id="margin" type="number" min="0" max="2" step="0.01" value="0.08"></label></div><div class="clip-fields"><label>Minimum speakers<input id="min-speakers" type="number" min="1" max="100" placeholder="Auto"></label><label>Maximum speakers<input id="max-speakers" type="number" min="1" max="100" placeholder="Auto"></label></div><p class="field-hint">Similarity is a score, not a probability. Calibrate matching on your room's recordings.</p></details></div>
+      <div id="meeting-options">
+        <div class="analysis-range-controls">
+          <label>Analysis range<select id="analysis-duration">
+            <option value="full">Full recording</option>
+            <option value="300">First 5 minutes</option>
+            <option value="600">First 10 minutes</option>
+            <option value="900">First 15 minutes</option>
+            <option value="1800">First 30 minutes</option>
+            <option value="3600">First 1 hour</option>
+            <option value="custom">Custom section…</option>
+          </select></label>
+          <div id="custom-range" class="clip-fields" hidden>
+            <label>Start · minutes<input id="analysis-start" type="number" min="0" step="0.01" value="0"></label>
+            <label>Length · minutes<input id="analysis-length" type="number" min="0.01" step="0.01" value="10"></label>
+          </div>
+          <button id="range-from-playhead" class="text-button" type="button">Start a 10-minute preview here ↗</button>
+          <p id="analysis-range-hint" class="field-hint">Analyze the complete recording. Your original media stays unchanged.</p>
+        </div>
+        <label>Saved voice collection<select id="collection-select"><option value="">Anonymous · no saved profiles</option></select></label><p class="field-hint">Choose a collection to recognize familiar voices. Anonymous labels belong to this recording only.</p><details class="advanced"><summary>Matching & speaker bounds</summary><div class="clip-fields"><label>Similarity threshold<input id="threshold" type="number" min="-1" max="1" step="0.01" value="0.55"></label><label>Match margin<input id="margin" type="number" min="0" max="2" step="0.01" value="0.08"></label></div><div class="clip-fields"><label>Minimum speakers<input id="min-speakers" type="number" min="1" max="100" placeholder="Auto"></label><label>Maximum speakers<input id="max-speakers" type="number" min="1" max="100" placeholder="Auto"></label></div><p class="field-hint">Similarity is a score, not a probability. Calibrate matching on your room's recordings.</p></details></div>
       <div id="enrollment-options" hidden><label>Collection name<input id="collection-name" value="Team reference voices" maxlength="100"></label><p class="field-hint">A saved collection can be reused. Each model configuration needs its own profiles.</p></div>
       <div id="runtime-note" class="runtime-note"></div><button id="runtime-setup" class="text-button">Review local setup →</button><div id="current-job" class="current-job" hidden></div>
       <div id="run-error" class="error-banner" role="alert" tabindex="-1" hidden></div>

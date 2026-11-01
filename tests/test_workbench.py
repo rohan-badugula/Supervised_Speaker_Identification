@@ -228,3 +228,36 @@ def test_missing_clean_references_fail_before_queueing(runtime):
     with pytest.raises(ValueError, match="clean reference"):
         app.submit({"kind": "enroll", "media_id": media["id"], "model": "community-1"})
     assert not app.store.list("job")
+
+
+def test_anonymous_preview_preserves_source_time(runtime, monkeypatch):
+    import wave
+    app, media = runtime
+    options = []
+
+    def convert(source, destination, **kwargs):
+        options.append(kwargs)
+        with wave.open(str(destination), "wb") as audio:
+            audio.setnchannels(1)
+            audio.setsampwidth(2)
+            audio.setframerate(16000)
+            audio.writeframes(b"\0" * 16000 * 2 * 6)
+        return destination
+
+    monkeypatch.setattr("speaker_id.workbench.service.convert_to_wav", convert)
+    job = app.submit({"kind": "identify", "model": "community-1", "media_id": media["id"],
+                      "start_seconds": 10, "duration_seconds": 6})
+    assert wait_job(app, job["id"])["status"] == "completed"
+    report = app.report(job["id"])
+    assert options == [{"start_seconds": 10, "duration_seconds": 6}]
+    assert [(s["start"], s["end"]) for s in report["segments"]] == [(10, 13), (12, 14)]
+    assert report["analysis_range"]["end_seconds"] == 16
+
+
+@pytest.mark.parametrize("options", [{"start_seconds": 20}, {"duration_seconds": 0},
+                                     {"duration_seconds": -10}, {"start_seconds": -1}])
+def test_invalid_analysis_range_never_queues(runtime, options):
+    app, media = runtime
+    with pytest.raises(ValueError):
+        app.submit({"kind": "identify", "model": "community-1", "media_id": media["id"], **options})
+    assert app.store.list("job") == []

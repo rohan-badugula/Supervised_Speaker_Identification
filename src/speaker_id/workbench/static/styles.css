@@ -119,3 +119,9 @@ dialog { width: min(510px,calc(100% - 32px)); color: var(--ink); background: var
 .timeline-key { color: #637251; }
 
 #run-error { white-space: pre-line; display: block; font-size: 11px; line-height: 1.8; }
+
+.analysis-range-controls { margin-top: 22px; padding: 17px; background: #e9ece1; border-left: 2px solid #8d9b74; }
+.analysis-range-controls .clip-fields { margin-top: 14px; }
+.analysis-range-controls .text-button { font-size: 10px; margin-top: 7px; }
+.analysis-range-controls .field-hint { font-size: 10px; }
+.analysis-scope { margin: 0 18px 12px; padding: 10px 12px; border-left: 2px solid var(--accent); background: #f5f2df; color: #69654d; font-family: monospace; font-size: 9px; line-height: 1.8; }

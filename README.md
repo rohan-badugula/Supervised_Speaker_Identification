@@ -31,18 +31,24 @@ From this project folder, start the UI with the existing virtual environment:
 Open **http://127.0.0.1:8766**. After installing the package, `voice-workbench`
 starts the same app. Stop it with Ctrl+C. `--port` and `--data-dir` are available.
 
-1. Open **Reference voices** and upload a separate reference MP3/MP4.
+1. Open **Reference room** and upload a separate reference MP3/MP4.
 2. Mark clean in/out points with the buttons or I/O shortcuts, assign dummy labels
    such as Person 1 and Person 2, and **Save labels**. Quality flags and inclusion
    checkboxes keep questionable clips out of enrollment.
-3. Choose a model and collection name, then **Build profiles**. The resulting
+3. Open **Configure run**, choose a model and collection name, then **Build profiles**. The resulting
    voiceprints and source-label metadata are retained locally across sessions.
-4. Open **Meetings**, upload the target recording, select that model and collection,
-   and **Analyze speakers**. Alternatively, choose anonymous mode without profiles;
+4. Open **Sessions**, import the target recording, open **Configure run**, select
+   that model and collection, and **Analyze speakers**. Alternatively, choose anonymous mode without profiles;
    anonymous Person 1/2 labels only have meaning within that recording.
-5. Click timeline segments or table timestamps to seek. Overlapping speakers have
+5. Click speaker tracks or timestamps in the review log to seek. Overlapping speakers have
    separate tracks and appear together over playback. Zoom, filter, correct labels,
    and export JSON/CSV. Corrections preserve the original model report separately.
+
+The session editor keeps the playback canvas and speaker tracks together on the
+left, with an editable speaker log on the right. A dedicated transport provides
+play/pause, ten-second jumps, scrubbing, speed and video fullscreen. Run settings
+open in a separate dialog. The archive, reference room, voice bank and run history
+are available from the top navigation; smaller screens stack the editor panels.
 
 Upload progress reports transferred bytes. Background jobs show processing stages,
 not an estimated inference percentage. One CPU worker processes jobs in order,

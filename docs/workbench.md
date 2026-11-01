@@ -2,12 +2,16 @@
 
 ## Implemented experience
 
-The application has four views: Meetings, Reference voices, Saved profiles and
-Processing. Opening a recording displays the original media, processing settings,
-speaker tracks and a segment table. Reference recordings additionally expose clip
+The application has four views: Sessions, Reference room, Voice bank and
+Run history. Opening a recording displays the original media, processing settings,
+speaker tracks and an editable chronological review log. Reference recordings additionally expose clip
 marking and quality controls. Profiles are reusable and specific to a model recipe.
 
-The browser uses plain HTML/CSS/JavaScript with native media controls. No external
+The browser uses plain HTML/CSS/JavaScript and an HTML media element with an
+accessible custom transport. The editor exposes playback, ten-second jumps,
+scrubbing, speed and video fullscreen. Model/profile settings open in a dialog
+from Configure run. Speaker tracks sit beneath playback, alongside the review
+log on wide screens; narrow screens stack the panels. No external
 fonts, CDN scripts, analytics, cloud storage or frontend build tool are required.
 The Python package includes the static assets and a `voice-workbench` entry point.
 
@@ -102,3 +106,26 @@ Real model inference on a conference recording remains unverified. FFmpeg and th
 optional ML dependencies are not installed in the inspected environment; model
 weights require Hugging Face access. Training, word transcription, Gemini
 integration, full evaluation and public deployment remain future work.
+
+
+## Interface decisions
+
+The archive and the editor serve different tasks. The archive uses a compact
+indexed list and a separate import area; the editor gives most of its space to
+playback and temporal review. A persistent navigation sidebar no longer consumes
+horizontal editing space. Configuration is available on demand rather than
+competing with the player and speaker log.
+
+The visual language uses paper, graphite, a restrained red navigation accent and
+pastel voice markers. Colors identify voices consistently within a run; they are
+not confidence indicators. The audio canvas uses an illustrative record graphic,
+not a fabricated waveform. Timecode, seeking and speaker tracks reflect actual
+media state and results. Controls respect reduced-motion preferences.
+
+The redesigned editor was checked in Safari using isolated synthetic media:
+selecting a log timestamp started playback at the corresponding segment and
+showed the simultaneous labels. The model settings dialog was also inspected.
+Chrome's native preview surface failed to render during this check; no Chrome
+visual verification is claimed for the redesign. The existing 45 backend and HTTP
+tests passed, JavaScript syntax passed Node checking, and static element bindings
+were checked. These checks do not replace evaluation on real model outputs.

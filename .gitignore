@@ -3,6 +3,9 @@ __pycache__/
 .pytest_cache/
 *.py[cod]
 .DS_Store
+.env
+.env.*
+!.env.example
 
 # Personal living learning notebook; keep out of the public project.
 /docs/LEARNING_GUIDE.local.md

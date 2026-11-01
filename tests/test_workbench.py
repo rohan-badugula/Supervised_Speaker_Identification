@@ -276,3 +276,58 @@ def test_invalid_analysis_range_never_queues(runtime, options):
     with pytest.raises(ValueError):
         app.submit({"kind": "identify", "model": "community-1", "media_id": media["id"], **options})
     assert app.store.list("job") == []
+
+
+def test_measured_progress_persists_and_is_throttled(runtime):
+    app, _ = runtime
+    job = app.store.save('job', {'status': 'running', 'progress': {'phase': 'queued'}})
+    app._progress(job['id'], 'segmentation', 2, 10)
+    app._progress(job['id'], 'segmentation', 3, 10)  # Throttled mid-stage write.
+    assert Store(app.store.root).get('job', job['id'])['progress']['completed'] == 2
+    app._progress(job['id'], 'segmentation', 10, 10)  # Completion always persists.
+    saved = Store(app.store.root).get('job', job['id'])
+    assert saved['progress'] == {'phase':'segmentation', 'completed':10, 'total':10, 'unit':'chunks'}
+    assert len(saved['events']) == 1
+    app._progress(job['id'], 'embeddings', 0, 5)
+    assert app.store.get('job', job['id'])['events'][-1]['phase'] == 'embeddings'
+
+
+def test_worker_heartbeat_and_stage_history_during_model_work(runtime):
+    app, media = runtime
+    entered, release = threading.Event(), threading.Event()
+
+    class Backend:
+        model_id = get_model('community-1').model_id
+
+        def set_progress_callback(self, callback):
+            self.callback = callback
+
+        def diarize(self, *args, **kwargs):
+            self.callback('segmentation', 1, 4)
+            entered.set()
+            release.wait(timeout=5)
+            return DiarizationResult((), {})
+
+    app.backend_loader = lambda *args, **kwargs: Backend()
+    job = app.submit({'kind':'identify', 'model':'community-1', 'media_id':media['id']})
+    try:
+        assert entered.wait(timeout=3)
+        initial = app.store.get('job', job['id'])['heartbeat_at']
+        deadline = time.monotonic() + 4
+        while time.monotonic() < deadline:
+            current = app.store.get('job', job['id'])
+            if current['heartbeat_at'] != initial:
+                break
+            time.sleep(.05)
+        assert current['status'] == 'running'
+        assert current['heartbeat_at'] != initial
+        assert current['progress']['completed'] == 1  # Heartbeat is not model progress.
+        assert current['progress']['total'] == 4
+    finally:
+        release.set()
+    completed = wait_job(app, job['id'])
+    assert completed['status'] == 'completed'
+    assert completed['progress']['phase'] == 'complete'
+    assert completed['elapsed_seconds'] >= 2
+    assert [event['phase'] for event in completed['events']][:2] == ['model_loading', 'extracting_audio']
+    assert completed['events'][-1]['phase'] == 'complete'

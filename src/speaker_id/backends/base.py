@@ -3,9 +3,17 @@ from __future__ import annotations
 from dataclasses import dataclass
 from math import isfinite
 from pathlib import Path
-from typing import Protocol
+from typing import Protocol, Callable
 
 import numpy as np
+
+ProgressCallback = Callable[[str, int | None, int | None], None]
+
+
+class ProgressAwareBackend(Protocol):
+    """Optional capability; backends without counters remain indeterminate."""
+
+    def set_progress_callback(self, callback: ProgressCallback) -> None: ...
 
 
 @dataclass(frozen=True)

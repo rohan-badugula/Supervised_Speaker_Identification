@@ -20,7 +20,7 @@ not model training. New speakers do not require retraining the network.
 A precise project description is: **an offline speaker-diarization and
 enrollment-based identification workbench for shared-microphone meetings**.
 
-## Milestone 1 — Make processing understandable (current)
+## Milestone 1 — Make processing understandable (implemented)
 
 Problem: users cannot tell whether a job is queued, preparing, progressing,
 failed or complete, and useful text is too small. Important state disappears
@@ -28,14 +28,14 @@ inside run configuration or on narrow layouts.
 
 Scope:
 
-- [ ] Persistent job status outside the configuration dialog, visible while playing media.
-- [ ] Separate queue, model preparation, extraction, inference, matching and saving stages.
-- [ ] Show actual model chunk/batch counts and stage percentage when provided.
-- [ ] Explicit indeterminate states when no meaningful total is available; no fake overall percentage or ETA.
-- [ ] Elapsed time, last reported progress and clear terminal outcome.
-- [ ] Bounded stage-event history for troubleshooting, surviving page refresh.
-- [ ] Larger readable text and controls, stronger contrast and visible status on narrow screens.
-- [ ] Tests for progress persistence, hook forwarding, failures and frontend rendering.
+- [x] Persistent job status outside the configuration dialog, visible while playing media.
+- [x] Separate queue, model preparation, extraction, inference, matching and saving stages.
+- [x] Show actual model chunk/batch counts and stage percentage when provided.
+- [x] Explicit indeterminate states when no meaningful total is available; no fake overall percentage or ETA.
+- [x] Elapsed time, last reported progress and clear terminal outcome.
+- [x] Bounded stage-event history for troubleshooting, surviving page refresh.
+- [x] Larger readable text and controls, stronger contrast and visible status on narrow screens.
+- [x] Tests for progress persistence, hook forwarding, failures and frontend rendering.
 
 Exit: after starting a five-minute run, the user can see what it is doing without
 opening a modal, and can distinguish a model that is processing from a failed job.
@@ -142,3 +142,9 @@ just a feature count or number of models.
 
 - Plan established: anonymous/enrolled terminology clarified; UX observability
   and readability prioritized before more model features.
+
+- 2026-11-01: Milestone 1 implemented and checked with persisted progress tests,
+  UI rendering tests, a real cached Community-1 hook smoke run and a synthetic
+  browser preview. Model counters, elapsed time, heartbeat and terminal outcomes
+  are visible outside configuration; text sizes increased. Real-meeting usability
+  review and the broader workflow audit remain in milestone 2.

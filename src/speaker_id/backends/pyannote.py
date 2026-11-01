@@ -6,7 +6,7 @@ from typing import Any
 import numpy as np
 
 from ..matching import centroid
-from .base import DiarizationResult, Turn
+from .base import DiarizationResult, Turn, ProgressCallback
 from .registry import ModelSpec
 
 
@@ -39,6 +39,17 @@ class PyannoteBackend:
         self.model_id = spec.model_id
         self.pipeline = pipeline
         self.encoder = encoder
+        self._progress_callback: ProgressCallback | None = None
+
+    def set_progress_callback(self, callback: ProgressCallback) -> None:
+        self._progress_callback = callback
+
+    def _hook(self, step_name, step_artifact=None, *, completed=None, total=None, **kwargs):
+        if self._progress_callback is None:
+            return
+        # The final embedding artifact is emitted immediately before clustering.
+        phase = "clustering" if step_name == "embeddings" and total is None and step_artifact is not None else step_name
+        self._progress_callback(phase, completed, total)
 
     @classmethod
     def load(cls, spec: ModelSpec, *, token: str, device: str) -> PyannoteBackend:
@@ -107,6 +118,9 @@ class PyannoteBackend:
         options = {key: value for key, value in {
             "min_speakers": min_speakers, "max_speakers": max_speakers,
         }.items() if value is not None}
+        if self._progress_callback is not None:
+            self._progress_callback("segmentation", None, None)
+            options["hook"] = self._hook
         output = self.pipeline(self._audio_input(wav_path), **options)
         annotation = output.speaker_diarization
         turns = tuple(Turn(float(turn.start), float(turn.end), str(label))
@@ -123,10 +137,12 @@ class PyannoteBackend:
         import soundfile as sf
 
         embeddings = {}
+        if self._progress_callback:
+            self._progress_callback("identity_embeddings", 0, len(labels))
         with sf.SoundFile(wav_path) as audio:
             if audio.samplerate != 16000 or audio.channels != 1:
                 raise ValueError("Backend inputs must be mono 16 kHz WAV files.")
-            for label in labels:
+            for index, label in enumerate(labels, 1):
                 vectors = []
                 # Cap extraction at 60s per cluster, preferring longer clean regions.
                 budget = 60 * 16000
@@ -148,4 +164,6 @@ class PyannoteBackend:
                         break
                 if vectors:
                     embeddings[str(label)] = centroid(vectors)
+                if self._progress_callback:
+                    self._progress_callback("identity_embeddings", index, len(labels))
         return DiarizationResult(turns, embeddings)

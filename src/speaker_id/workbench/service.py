@@ -23,6 +23,7 @@ from ..profiles import ProfileBundle, load_profiles, save_profiles
 from ..provenance import package_versions, sha256_file
 from ..reporting import build_summary, write_csv_report, write_json_report
 from .store import Store
+from .progress import STAGE_LABELS, STAGE_UNITS
 from .runtime import RuntimeNotReady, runtime_health, setup_issues, source_signature
 
 
@@ -61,6 +62,7 @@ class Workbench:
         self.backend_loader = backend_loader
         self.pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="voice-workbench")
         self.lock = threading.RLock()
+        self._last_progress_write = {}
         # A previous process cannot still own these jobs. Do not silently rerun ML.
         for job in self.store.list("job"):
             if job["status"] in ACTIVE:
@@ -122,7 +124,9 @@ class Workbench:
             media = self.store.get("media", str(payload.get("media_id", "")))
             job = {"id": uuid4().hex, "kind": kind, "media_id": media["id"],
                    "media_name": media["name"], "model": spec.key, "status": "queued",
-                   "stage": "Waiting for worker", "error": None}
+                   "stage": STAGE_LABELS["queued"], "error": None,
+                   "queued_at": datetime.now(timezone.utc).isoformat(),
+                   "progress": {"phase": "queued", "completed": None, "total": None, "unit": None}}
             if kind == "enroll":
                 segments = validate_segments(media.get("annotations", []), media.get("duration"))
                 segments = [item for item in segments if item["included"] and item["flag"] == "clean"]
@@ -177,36 +181,84 @@ class Workbench:
             job.update(changes)
             self.store.save("job", job)
 
+    def _progress(self, identity, phase, completed=None, total=None):
+        with self.lock:
+            job = self.store.get("job", identity)
+            previous = job.get("progress", {})
+            changed = previous.get("phase") != phase
+            now = perf_counter()
+            count = max(0, int(completed)) if completed is not None else None
+            limit = int(total) if total is not None and int(total) > 0 else None
+            if count is not None and limit is not None:
+                count = min(count, limit)
+            finished = limit is not None and count == limit
+            if not changed and not finished and now - self._last_progress_write.get(identity, 0) < .5:
+                return
+            self._last_progress_write[identity] = now
+            timestamp = datetime.now(timezone.utc).isoformat()
+            message = STAGE_LABELS.get(phase, phase.replace("_", " ").capitalize())
+            if not changed and count is None and limit is None:
+                count, limit = previous.get("completed"), previous.get("total")
+            job.update(stage=message, last_progress_at=timestamp,
+                       progress={"phase": phase, "completed": count, "total": limit,
+                                 "unit": STAGE_UNITS.get(phase)})
+            if changed:
+                job["stage_started_at"] = timestamp
+                job["events"] = (job.get("events", []) + [{"at": timestamp, "phase": phase,
+                                                          "message": message}])[-30:]
+            self.store.save("job", job)
+
     def _run(self, identity: str):
         started = perf_counter()
+        stop_heartbeat = threading.Event()
+
+        def heartbeat():
+            while not stop_heartbeat.wait(2):
+                with self.lock:
+                    if self.store.get("job", identity)["status"] != "running":
+                        return
+                    self._update(identity, heartbeat_at=datetime.now(timezone.utc).isoformat())
+
+        heartbeat_thread = threading.Thread(target=heartbeat, daemon=True, name=f"job-heartbeat-{identity[:8]}")
         try:
             job = self.store.get("job", identity)
-            self._update(identity, status="running", stage="Loading model weights")
+            timestamp = datetime.now(timezone.utc).isoformat()
+            self._update(identity, status="running", started_at=timestamp, heartbeat_at=timestamp)
+            heartbeat_thread.start()
+            self._progress(identity, "model_loading")
             spec = get_model(job["model"])
             backend = self.backend_loader(spec.key, token=resolve_token(None), device="cpu")
+            setter = getattr(backend, "set_progress_callback", None)
+            if setter is not None and job["kind"] == "identify":
+                setter(lambda phase, completed=None, total=None: self._progress(identity, phase, completed, total))
             source = self.media_path(job["media_id"])
             if job["kind"] == "enroll":
                 self._enroll(job, backend, source)
             else:
                 self._identify(job, backend, source)
+            self._progress(identity, "complete", 1, 1)
             self._update(identity, status="completed", stage="Complete",
                          elapsed_seconds=round(perf_counter() - started, 2))
         except Exception as error:
-            # Keep tokens out of persisted error messages from external libraries.
             message = str(error)[:1500]
             token = os.environ.get("HF_TOKEN")
             if token:
                 message = message.replace(token, "[redacted]")
             failed_stage = self.store.get("job", identity)["stage"]
+            self._progress(identity, "failed")
             self._update(identity, status="failed", stage="Processing failed", failed_stage=failed_stage,
                          elapsed_seconds=round(perf_counter() - started, 2), error=message)
+        finally:
+            stop_heartbeat.set()
+            if heartbeat_thread.is_alive():
+                heartbeat_thread.join(timeout=1)
+            self._last_progress_write.pop(identity, None)
 
     def _enroll(self, job, backend, source):
-        self._update(job["id"], stage="Extracting clean reference clips")
+        self._progress(job["id"], "references", 0, len(job["annotations"]))
         embeddings, counts = {}, {}
         with tempfile.TemporaryDirectory(prefix="voice-reference-") as directory:
             for index, segment in enumerate(job["annotations"]):
-                self._update(job["id"], stage=f"Embedding reference {index + 1} of {len(job['annotations'])}")
                 clip = Path(directory) / f"{index}.wav"
                 subprocess.run([require_ffmpeg(), "-hide_banner", "-loglevel", "error", "-y",
                                 "-ss", str(segment["start"]), "-i", str(source),
@@ -216,10 +268,12 @@ class Workbench:
                 name = segment["speaker"]
                 embeddings.setdefault(name, []).append(backend.embed_enrollment(clip))
                 counts[name] = counts.get(name, 0) + 1
+                self._progress(job["id"], "references", index + 1, len(job["annotations"]))
         collection_id = uuid4().hex
         relative = f"profiles/{collection_id}/voiceprints.npz"
         bundle = ProfileBundle({name: centroid(values) for name, values in embeddings.items()},
                                counts, backend.model_id)
+        self._progress(job["id"], "saving")
         save_profiles(bundle, self.store.path(relative))
         metadata = {"id": collection_id, "name": job["collection_name"], "model": job["model"],
                     "model_id": backend.model_id, "path": relative, "media_id": job["media_id"],
@@ -232,8 +286,7 @@ class Workbench:
 
     def _identify(self, job, backend, source):
         window = AnalysisRange(job.get("start_seconds", 0), job.get("duration_seconds"))
-        self._update(job["id"], stage="Converting audio and analyzing speakers" if window.is_full else
-                     "Extracting selected range and analyzing speakers")
+        self._progress(job["id"], "extracting_audio")
         options = {key: job.get(key) for key in ("min_speakers", "max_speakers")}
         range_options = {} if window.is_full else {
             "start_seconds": window.start_seconds, "duration_seconds": window.duration_seconds,
@@ -242,7 +295,9 @@ class Workbench:
             collection = self.store.get("collection", job["collection_id"])
             profile_path = self.store.path(collection["path"])
             report = identify_speakers(backend, source, load_profiles(profile_path),
-                                      threshold=job["threshold"], minimum_margin=job["margin"], **options, **range_options)
+                                      threshold=job["threshold"], minimum_margin=job["margin"],
+                                      on_progress=lambda phase, done=None, total=None: self._progress(job["id"], phase, done, total),
+                                      **options, **range_options)
             report["profiles_sha256"] = sha256_file(profile_path)
         else:
             with tempfile.TemporaryDirectory(prefix="voice-meeting-") as directory:
@@ -250,7 +305,9 @@ class Workbench:
                 processed_seconds = None if window.is_full else wav_duration(wav_path)
                 if processed_seconds is not None and processed_seconds <= 0:
                     raise ValueError("The selected range contains no audio. Choose an earlier start time.")
+                self._progress(job["id"], "analyzing")
                 output = backend.diarize(wav_path, **options)
+            self._progress(job["id"], "matching")
             # Stable within this recording only, ordered by first appearance.
             names = {}
             segments = []
@@ -266,11 +323,12 @@ class Workbench:
             report = {"schema_version": 2, "model": backend.model_id, "segments": segments,
                       "summary_seconds": build_summary(segments), "mode": "anonymous",
                       "analysis_range": window.metadata(processed_seconds)}
+        self._progress(job["id"], "provenance")
         report.update(media_id=job["media_id"], job_id=job["id"], source_sha256=sha256_file(source))
         report.setdefault("mode", "identified")
         report["configuration"] = {"model": asdict(get_model(job["model"])), "device": "cpu",
                                    "package_versions": package_versions(), "options": options}
-        self._update(job["id"], stage="Saving speaker timeline")
+        self._progress(job["id"], "saving")
         relative = f"reports/{job['id']}.json"
         write_json_report(report, self.store.path(relative))
         write_csv_report(report["segments"], self.store.path(relative).with_suffix(".csv"))

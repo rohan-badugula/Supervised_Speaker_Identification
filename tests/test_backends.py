@@ -182,3 +182,31 @@ def test_waveform_loader_rejects_invalid_audio(monkeypatch, tmp_path, samples, r
     monkeypatch.setitem(sys.modules, 'torch', SimpleNamespace(from_numpy=lambda value: pytest.fail('Invalid input encoded')))
     with pytest.raises(ValueError, match='nonempty mono 16 kHz'):
         PyannoteBackend._audio_input(tmp_path / 'invalid.wav')
+
+
+def test_model_progress_hook_forwards_real_counts_and_clustering(monkeypatch, tmp_path):
+    class EmptyAnnotation:
+        def labels(self):
+            return []
+
+        def itertracks(self, yield_label):
+            return iter(())
+
+    def pipeline(source, **options):
+        hook = options['hook']
+        hook('segmentation', None, completed=0, total=8)
+        hook('segmentation', None, completed=4, total=8)
+        hook('segmentation', None, completed=8, total=8)
+        hook('embeddings', None, completed=2, total=2)
+        hook('embeddings', np.zeros((1, 2)))
+        return SimpleNamespace(speaker_diarization=EmptyAnnotation())
+
+    backend = PyannoteBackend(get_model('community-1'), pipeline)
+    monkeypatch.setattr(backend, '_audio_input', lambda path: {'waveform': np.zeros((1, 16000)), 'sample_rate': 16000})
+    events = []
+    backend.set_progress_callback(lambda *values: events.append(values))
+    backend.diarize(tmp_path / 'audio.wav')
+    assert ('segmentation', 4, 8) in events
+    assert ('segmentation', 8, 8) in events
+    assert ('embeddings', 2, 2) in events
+    assert events[-1] == ('clustering', None, None)

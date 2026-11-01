@@ -103,3 +103,24 @@ test('Outdated workers cannot silently receive another analysis request', async 
     assert.equal(elements.get('run-error').hidden, false);
   }
 });
+
+
+test('Visible progress shows measured stage counts rather than an invented overall percentage', () => {
+  const {context} = app();
+  const markup = vm.runInContext(`jobProgressMarkup({status:'running',stage:'Detecting speech',model:'community-1',
+    progress:{phase:'segmentation',completed:2,total:8,unit:'chunks'},events:[]})`, context);
+  assert.match(markup, /2 of 8 chunks · 25% of this stage/);
+  assert.match(markup, /value="2" max="8"/);
+  assert.match(markup, /data-job-heartbeat/);
+});
+
+test('Unmeasured preparation stays indeterminate and failures are explicit', () => {
+  const {context} = app();
+  const loading = vm.runInContext(`jobProgressMarkup({status:'running',stage:'Preparing model',model:'community-1',progress:{phase:'model_loading'}})`, context);
+  assert.match(loading, /does not report a total/);
+  assert.doesNotMatch(loading, /value="0"|100%/);
+  const failed = vm.runInContext(`jobProgressMarkup({status:'failed',stage:'Processing failed',failed_stage:'Preparing model',model:'community-1',error:'Access denied'})`, context);
+  assert.match(failed, /This run is no longer running/);
+  assert.match(failed, /Access denied/);
+  assert.match(failed, /Review settings &amp; retry|Review settings & retry/);
+});

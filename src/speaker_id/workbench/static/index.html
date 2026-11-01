@@ -34,6 +34,7 @@
     <div id="server-update" class="error-banner" role="alert" hidden><span><strong>Server restart needed.</strong> The Python worker is running an older version. In the terminal where you set HF_TOKEN, stop it with Ctrl+C and run <code>.venv/bin/python tools/run_workbench.py</code>, then refresh this page. Your recordings stay saved.</span></div>
     <div id="error-banner" class="error-banner" role="alert" hidden><span id="error-text"></span><button id="dismiss-error" aria-label="Dismiss error">×</button></div>
     <div id="upload-progress" class="upload-progress" hidden><div><strong id="upload-name">Uploading</strong><span id="upload-percent"></span></div><progress id="upload-meter" max="100" value="0"></progress></div>
+    <section id="global-activity" class="processing-panel" aria-label="Latest processing activity" hidden></section>
     <section id="library" aria-label="Recording library"></section>
     <section id="workspace" hidden>
       <div class="recording-header"><button id="back-library" class="text-button">← Session archive</button><span class="crumb-divider">/</span><span id="recording-type" class="tag">MEETING</span><span id="save-status" role="status"></span></div>
@@ -41,13 +42,14 @@
         <div><h2 id="recording-name"></h2><p id="recording-meta"></p></div>
         <div class="session-actions"><span id="session-job" class="session-job" role="status"></span><button id="refresh-results" class="secondary">↻ Refresh</button><button id="configure-run" class="primary">Configure run <span aria-hidden="true">↗</span></button></div>
       </div>
+      <section id="processing-panel" class="processing-panel" aria-label="Processing status" hidden></section>
       <div class="review-grid">
         <div class="media-column">
           <section class="player-panel" aria-label="Media player">
             <div class="canvas-header"><span><i class="record-dot"></i> ORIGINAL SOURCE</span><span id="media-format">MEDIA</span></div>
             <div class="player-stage audio">
               <video id="player" preload="metadata" playsinline></video>
-              <div id="audio-stage" class="audio-stage" aria-hidden="true"><div class="audio-readout"><span class="stage-kicker">ELAPSED TIME</span><strong id="stage-time">00:00</strong><span id="stage-state">Ready to listen</span></div><div class="disc"><div class="disc-core">SW<span>LOCAL AUDIO</span></div></div></div>
+              <div id="audio-stage" class="audio-stage" aria-hidden="true"><div class="audio-readout"><span class="stage-kicker">ELAPSED TIME</span><strong id="stage-time">00:00</strong><span id="stage-state">Ready to listen</span></div><div class="disc"><div class="disc-core">SW</div></div></div>
               <div id="active-speakers" class="speaker-overlay" aria-live="off"></div>
             </div>
             <div class="transport">

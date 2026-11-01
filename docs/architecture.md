@@ -53,14 +53,15 @@ publishing benchmark claims. Avoid selecting thresholds on the test set.
 ## Delivery milestones
 
 The ordered next-step plan and acceptance criteria are in [roadmap.md](roadmap.md).
-UX progress visibility and readability are the first active milestone.
+UX progress visibility and readability are implemented in milestone 1; primary-workflow usability is next.
 
 
 - [x] Backend contract, registry and two selectable adapter configurations.
 - [x] Profile compatibility enforcement, atomic profile writes and input validation.
 - [x] Overlap-preserving reports and initial run provenance.
 - [x] Offline unit tests and CI definition for Python 3.11–3.13.
-- [ ] Install ML dependencies; smoke-test actual weights and media decoding on the target machine.
+- [x] Install Community-1 dependencies; smoke-test cached weights and waveform decoding locally.
+- [ ] Verify ECAPA with actual weights and evaluate real meeting audio.
 - [ ] Establish a dataset manifest with enrollment, development and untouched test
       sessions; include unknown speakers and genuine overlaps. Check audio and label quality.
 - [ ] Build benchmark runner: named attribution error, diarization error, unknown
@@ -81,6 +82,8 @@ UX progress visibility and readability are the first active milestone.
 See [workbench architecture](workbench.md) for the implemented local application.
 Core and job tests use synthetic embeddings and framework stubs. They verify contracts,
 matching, overlap preservation and isolation, not real-model accuracy or framework
-compatibility. CI currently tests the lightweight core only. ML installation,
-adapter integration, model revision pinning and real-audio evaluation remain open.
+compatibility. A local cached Community-1 smoke check executes inference on a
+synthetic tone and verifies progress hooks; it does not measure speaker accuracy.
+CI currently tests the lightweight core only. ECAPA integration, model revision
+pinning and real-audio evaluation remain open.
 This foundation is not a production deployment.

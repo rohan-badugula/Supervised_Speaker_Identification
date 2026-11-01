@@ -34,6 +34,7 @@ function updateSetup(){const h=state.data.health;const ready=h.ffmpeg&&h.audio&&
 function showView(view){if(!allowLeave())return;state.view=view;state.media=null;state.report=null;state.jobId=null;state.dirty=false;state.labels={};$('player').pause();$('player').removeAttribute('src');$('player').load();document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===view));$('page-title').textContent=titles[view][0];$('page-description').textContent=titles[view][1];$('upload-button').hidden=!['meetings','references'].includes(view);$('upload-button').textContent=view==='references'?'＋ Import reference':'＋ Import media';renderPage();}
 function renderPage() {
   syncShell();
+  updateCurrentJob();
   const workspace = !!state.media;
   $('workspace').hidden = !workspace;
   $('library').hidden = workspace || !['meetings', 'references'].includes(state.view);
@@ -91,7 +92,7 @@ function renderPage() {
     }).join('')}</div><div class="library-tail">${reference ? 'Open a recording to mark clips and build a voice collection.' : 'Open a session to listen, analyze and review.'}</div>`;
   $('library').querySelectorAll('[data-media]').forEach(button => button.onclick = () => openMedia(button.dataset.media));
 }
-async function openMedia(id,jobId=null){if(!allowLeave())return;const media=state.data.media.find(m=>m.id===id);if(!media)return;state.media=media;state.report=null;state.annotations=structuredClone(media.annotations);state.dirty=false;state.labels={};state.rows=100;state.jobId=jobId;state.clipEnd=null;const ref=media.role==='reference';state.view=ref?'references':'meetings';document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===state.view));$('page-title').textContent=titles[state.view][0];$('page-description').textContent=titles[state.view][1];$('upload-button').hidden=false;$('upload-button').textContent=ref?'＋ Import reference':'＋ Import media';renderPage();$('recording-name').textContent=media.name;$('recording-meta').textContent=`${media.video?'Video':'Audio'} · ${size(media.size)} · ${media.duration?time(media.duration):'Loading duration…'}`;$('recording-type').textContent=ref?'REFERENCE':'MEETING';$('save-status').textContent='';$('analysis-scope').hidden=true;$('analysis-duration').value='full';$('analysis-start').value='0';$('analysis-length').value='10';updateRangeHint();$('reference-editor').hidden=!ref;$('enrollment-options').hidden=!ref;$('meeting-options').hidden=ref;$('run-title').textContent=ref?'Build voice profiles':'Analyze recording';$('run-button').innerHTML=ref?'Build profiles <span aria-hidden="true">→</span>':'Analyze speakers <span aria-hidden="true">→</span>';$('save-labels').hidden=!ref;$('save-corrections').hidden=true;$('export-json').hidden=!ref||!media.annotations.length;$('export-json').href=`/api/labels/${media.id}`;$('export-csv').hidden=true;$('quality-heading').textContent=ref?'QUALITY':'MATCH';$('segments-description').textContent=ref?'Only included, clean clips are used for voice profiles.':'Edit a speaker label to correct a segment. The original prediction is preserved.';$('segment-search').value='';$('timeline-zoom').value='1';$('clip-start').value='';$('clip-end').value='';$('clip-speaker').value='Person 1';$('player').parentElement.classList.toggle('audio',!media.video);$('fullscreen').hidden=!media.video;$('media-format').textContent=media.name.split('.').pop().toUpperCase();$('player').src=`/api/media/${media.id}`;$('player').load();populateModels();populateCollections();updateRunHistory();renderSegments();renderTimeline();updateCurrentJob();if(!ref){const latest=jobId?state.data.jobs.find(j=>j.id===jobId):state.data.jobs.find(j=>j.media_id===id&&j.status==='completed'&&j.report);if(latest)await loadReport(latest.id);}}
+async function openMedia(id,jobId=null){if(!allowLeave())return;const media=state.data.media.find(m=>m.id===id);if(!media)return;state.media=media;state.report=null;state.annotations=structuredClone(media.annotations);state.dirty=false;state.labels={};state.rows=100;state.jobId=jobId;state.clipEnd=null;const ref=media.role==='reference';state.view=ref?'references':'meetings';document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===state.view));$('page-title').textContent=titles[state.view][0];$('page-description').textContent=titles[state.view][1];$('upload-button').hidden=false;$('upload-button').textContent=ref?'＋ Import reference':'＋ Import media';renderPage();$('recording-name').textContent=media.name;$('recording-meta').textContent=`${media.video?'Video':'Audio'} · ${size(media.size)} · ${media.duration?time(media.duration):'Loading duration…'}`;$('recording-type').textContent=ref?'REFERENCE':'MEETING';$('save-status').textContent='';$('analysis-scope').hidden=true;$('analysis-duration').value='full';$('analysis-start').value='0';$('analysis-length').value='10';updateRangeHint();$('reference-editor').hidden=!ref;$('enrollment-options').hidden=!ref;$('meeting-options').hidden=ref;$('run-title').textContent=ref?'Build voice profiles':'Analyze recording';$('run-button').innerHTML=ref?'Build profiles <span aria-hidden="true">→</span>':'Analyze speakers <span aria-hidden="true">→</span>';$('save-labels').hidden=!ref;$('save-corrections').hidden=true;$('export-json').hidden=!ref||!media.annotations.length;$('export-json').href=`/api/labels/${media.id}`;$('export-csv').hidden=true;$('quality-heading').textContent=ref?'QUALITY':'MATCH';$('segments-description').textContent=ref?'Only included, clean clips are used for voice profiles.':'Edit a speaker label to correct a segment. The original prediction is preserved.';$('segment-search').value='';$('timeline-zoom').value='1';$('clip-start').value='';$('clip-end').value='';$('clip-speaker').value='Person 1';$('player').parentElement.classList.toggle('audio',!media.video);$('fullscreen').hidden=!media.video;$('media-format').textContent=media.name.split('.').pop().toUpperCase();$('player').src=`/api/media/${media.id}`;$('player').load();populateModels();populateCollections();updateRunHistory();renderSegments();renderTimeline();updateCurrentJob();if(!ref){const latest=jobId?state.data.jobs.find(j=>j.id===jobId):state.data.jobs.find(j=>j.media_id===id&&j.status==='completed'&&j.report);if(latest?.status==='completed'&&latest.report)await loadReport(latest.id);}}
 function populateModels(){const value=$('model-select').value||'community-1';$('model-select').innerHTML=state.data.models.map(m=>`<option value="${esc(m.key)}">${m.key==='community-1'?'Community-1':'Community-1 + ECAPA'}</option>`).join('');$('model-select').value=value;updateModelHint();}
 function updateModelHint(){$('model-hint').textContent=$('model-select').value==='community-1'?'Diarization and identity matching with native speaker embeddings.':'Community-1 activity with ECAPA identity embeddings from clean regions.';updateSetup();}
 function populateCollections(){const current=$('collection-select').value;const compatible=state.data.collections.filter(c=>c.model===$('model-select').value);$('collection-select').innerHTML='<option value="">Anonymous · no saved profiles</option>'+compatible.map(c=>`<option value="${esc(c.id)}">${esc(c.name)} · ${c.speakers.length} voices</option>`).join('');if(compatible.some(c=>c.id===current))$('collection-select').value=current;}
@@ -174,15 +175,81 @@ function updatePlayback() {
 async function saveAnnotations(){if(!state.media)return;const saved=await api(`/api/media/${state.media.id}/annotations`,{annotations:state.annotations,revision:state.media.revision});state.media=saved;const i=state.data.media.findIndex(m=>m.id===saved.id);state.data.media[i]=saved;state.dirty=false;$('save-status').textContent='Labels saved';$('export-json').hidden=false;$('export-json').href=`/api/labels/${saved.id}`;toast('Reference labels saved locally');}
 async function runJob(){if(!state.media)return;$('run-error').hidden=true;if(serverNeedsRestart()){fail(new Error('Server restart required. Stop the old worker with Ctrl+C, run .venv/bin/python tools/run_workbench.py in the terminal where HF_TOKEN is set, then refresh.'));return;}if(state.media.role!=='reference'&&!allowLeave())return;$('run-button').disabled=true;try{const ref=state.media.role==='reference';if(ref&&state.dirty)await saveAnnotations();const body={kind:ref?'enroll':'identify',media_id:state.media.id,model:$('model-select').value};if(ref)body.name=$('collection-name').value;else Object.assign(body,selectedRange(),{collection_id:$('collection-select').value||null,threshold:Number($('threshold').value),margin:Number($('margin').value),min_speakers:$('min-speakers').value||null,max_speakers:$('max-speakers').value||null});const job=await api('/api/jobs',body);state.jobId=job.id;state.labels={};state.data.jobs.unshift(job);updateCurrentJob();$('run-dialog').close();toast('Job queued. You can keep using the workbench.');await refresh();}catch(error){fail(error);}finally{$('run-button').disabled=false;updateCurrentJob();}}
 function updateCurrentJob() {
-  if (!state.media) return;
-  const job = state.data.jobs.find(job => job.media_id === state.media.id);
+  if (!state.data) return;
+  const jobs = state.data.jobs;
+  const active = job => ['queued', 'running'].includes(job.status);
+  const current = state.media && (jobs.find(job => job.media_id === state.media.id && active(job)) ||
+    jobs.find(job => job.media_id === state.media.id && job.id === state.jobId) ||
+    jobs.find(job => job.media_id === state.media.id));
+  const latest = jobs.find(job => job.status === 'running') || jobs.find(active) || jobs[0];
+  renderProcessingPanel($('processing-panel'), current, false);
+  renderProcessingPanel($('global-activity'), (!state.media || latest?.media_id !== state.media.id) ? latest : null, true);
   const panel = $('current-job');
-  panel.hidden = !job || job.status === 'completed';
-  if (job) panel.innerHTML = `<strong>${esc(job.status === 'failed' ? 'Run failed' : job.status === 'interrupted' ? 'Run interrupted' : job.stage)}</strong><span>${esc(job.error || `${job.model} · ${job.status}`)}</span>`;
-  const active = state.data.jobs.some(job => job.media_id === state.media.id && ['queued', 'running'].includes(job.status));
-  $('run-button').disabled = active;
-  $('session-job').textContent = active ? job.stage : job?.status === 'failed' ? 'Last run failed' : '';
+  panel.hidden = !current || current.status === 'completed';
+  if (current) panel.textContent = `${current.stage}${current.error ? ': ' + current.error : ''}`;
+  const running = jobs.some(job => job.media_id === state.media?.id && active(job));
+  $('run-button').disabled = running;
+  $('session-job').textContent = current ? (running ? current.stage : current.status === 'failed' ? 'Run failed — see details below' : '') : '';
+  updateJobClocks();
 }
+
+function jobProgressMarkup(job, global = false) {
+  const active = ['queued', 'running'].includes(job.status);
+  const progress = job.progress || {};
+  const measured = Number.isFinite(progress.total) && progress.total > 0 && Number.isFinite(progress.completed);
+  const done = measured ? Math.max(0, Math.min(progress.total, progress.completed)) : 0;
+  const percent = measured ? Math.floor(done / progress.total * 100) : null;
+  const count = job.status === 'completed' ? 'Finished. The saved result is ready to review.' :
+    job.status === 'failed' ? `Failed during: ${job.failed_stage || 'processing'}. This run is no longer running.` :
+    job.status === 'interrupted' ? 'The server stopped before this run finished. Start a new run to retry.' :
+    job.status === 'queued' ? 'Waiting for the local worker. Other jobs may be ahead of this run.' :
+    measured ? `${done} of ${progress.total} ${progress.unit || 'items'} · ${percent}% of this stage` :
+    'This stage does not report a total. No completion time is estimated.';
+  const meter = active ? `<progress class="stage-progress" aria-label="${esc(job.stage || 'Processing')} stage progress" ${measured ? `value="${done}" max="${progress.total}"` : ''}></progress>` : '';
+  const events = (job.events || []).slice(-4);
+  const clockStart = job.started_at || job.queued_at;
+  const elapsed = job.elapsed_seconds != null ? time(job.elapsed_seconds) : clockStart ? time(Math.max(0, (Date.now() - Date.parse(clockStart)) / 1000)) : '—';
+  return `<div class="processing-heading"><div><span class="processing-status ${esc(job.status)}">${esc(job.status.toUpperCase())}</span><h3>${esc(job.stage || job.status)}</h3></div><span class="job-clock" data-job-clock data-clock-label="${job.status === 'queued' ? 'waiting' : 'elapsed'}" data-start="${esc(clockStart || '')}" data-final="${job.elapsed_seconds ?? ''}">${elapsed} ${job.status === 'queued' ? 'waiting' : 'elapsed'}</span></div>
+    <p class="processing-context">${esc(global ? job.media_name + ' · ' : '')}${esc(job.model)} · ${esc(rangeLabel(job))}</p>
+    ${meter}<p class="processing-detail">${esc(count)}</p>
+    ${job.status === 'running' ? `<p class="processing-liveness"><span data-job-heartbeat data-time="${esc(job.heartbeat_at || '')}"></span><span data-job-last-progress data-time="${esc(job.last_progress_at || '')}"></span></p>` : ''}
+    ${events.length ? `<ol class="processing-events">${events.map(event => `<li><span>${esc(new Date(event.at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'}))}</span> ${esc(event.message)}</li>`).join('')}</ol>` : ''}
+    ${job.error ? `<p class="processing-error">${esc(job.error.split('\n')[0])}</p><details class="processing-diagnostics"><summary>Technical error details</summary><pre>${esc(job.error)}</pre></details>` : ''}
+    <div class="processing-actions">${global || job.report ? `<button class="secondary" data-open-job="${esc(job.id)}">${job.report ? 'Review result' : 'Open recording'} ↗</button>` : ''}${!global && ['failed','interrupted'].includes(job.status) ? '<button class="primary" data-retry-run>Review settings & retry</button>' : ''}</div>`;
+}
+
+function renderProcessingPanel(panel, job, global) {
+  panel.hidden = !job;
+  if (!job) { panel._renderKey = ''; return; }
+  const key = JSON.stringify([job.id, job.status, job.stage, job.progress, job.error, job.failed_stage, job.elapsed_seconds, job.events]);
+  if (panel._renderKey !== key) {
+    panel._renderKey = key;
+    panel.innerHTML = jobProgressMarkup(job, global);
+    panel.querySelectorAll('[data-open-job]').forEach(button => button.onclick = () => openMedia(job.media_id, job.report ? job.id : null));
+    panel.querySelectorAll('[data-retry-run]').forEach(button => button.onclick = () => $('configure-run').click());
+  }
+  panel.querySelectorAll('[data-job-heartbeat]').forEach(element => element.setAttribute('data-time', job.heartbeat_at || ''));
+  panel.querySelectorAll('[data-job-last-progress]').forEach(element => element.setAttribute('data-time', job.last_progress_at || ''));
+}
+
+function updateJobClocks() {
+  const secondsSince = timestamp => Math.max(0, Math.floor((Date.now() - Date.parse(timestamp)) / 1000));
+  document.querySelectorAll('[data-job-clock]').forEach(element => {
+    const terminal = element.getAttribute('data-final');
+    const start = element.getAttribute('data-start');
+    const seconds = terminal !== '' ? Number(terminal) : start ? secondsSince(start) : null;
+    if (Number.isFinite(seconds)) element.textContent = `${time(seconds)} ${element.getAttribute('data-clock-label') || 'elapsed'}`;
+  });
+  document.querySelectorAll('[data-job-heartbeat]').forEach(element => {
+    const timestamp = element.getAttribute('data-time');
+    element.textContent = timestamp ? `Worker heartbeat ${secondsSince(timestamp)}s ago` : 'Waiting for worker heartbeat';
+  });
+  document.querySelectorAll('[data-job-last-progress]').forEach(element => {
+    const timestamp = element.getAttribute('data-time');
+    element.textContent = timestamp ? `Stage progress updated ${secondsSince(timestamp)}s ago` : 'No model progress reported yet';
+  });
+}
+
 function renderProfiles(){const collections=state.data.collections;if(!collections.length){$('profiles-page').innerHTML='<div class="empty-library"><div class="empty-symbol">◉</div><h2>Voices you can come back to</h2><p>Upload a reference recording, label clean clips, then build a profile collection. It will stay available for future meetings.</p><button id="go-reference" class="primary">Prepare reference voices →</button></div>';$('go-reference').onclick=()=>showView('references');return;}$('profiles-page').innerHTML=`<div class="profile-grid">${collections.map(c=>`<article class="profile-card"><span class="tag">${esc(c.model)}</span><h2 style="margin-top:15px">${esc(c.name)}</h2><p class="profile-meta">${c.speakers.length} voices · Saved ${new Date(c.updated).toLocaleDateString()}</p>${c.speakers.map(s=>`<div class="profile-speaker"><span>${esc(s.name)}</span><span class="muted">${time(s.seconds)} · ${s.clips} clips</span></div><div class="coverage" title="Reference duration against a five-minute collection target; not accuracy"><span style="width:${Math.min(100,s.seconds/300*100)}%"></span></div>`).join('')}<p class="field-hint">Bars show collected speech toward 5 minutes, not model accuracy.</p><button class="secondary" data-reference="${esc(c.media_id)}">Review source clips ↗</button></article>`).join('')}</div>`;$('profiles-page').querySelectorAll('[data-reference]').forEach(b=>b.onclick=()=>openMedia(b.dataset.reference));}
 function renderJobs(){const jobs=state.data.jobs;if(!jobs.length){$('jobs-page').innerHTML='<div class="empty-library"><div class="empty-symbol">↻</div><h2>No processing jobs yet</h2><p>Open a meeting to analyze speakers, or build a collection from your reference clips. Jobs run one at a time on this computer.</p></div>';return;}$('jobs-page').innerHTML=`<div class="jobs-list">${jobs.map(j=>`<article class="job-card"><span class="job-status ${esc(j.status)}">${esc(j.status)}</span><div class="job-info"><h3>${esc(j.kind==='enroll'?'Build profiles':'Analyze speakers')} · ${esc(j.media_name)}</h3><p>${esc(j.model)} · ${esc(rangeLabel(j))} · ${esc(j.stage)}${j.elapsed_seconds!==undefined?` · ${j.elapsed_seconds}s`:''}</p>${j.error?`<p class="job-error">${esc(j.error)}</p>`:''}</div><button class="secondary" data-job="${esc(j.id)}">${j.report?'Review timeline':'Open recording'} ↗</button></article>`).join('')}</div>`;$('jobs-page').querySelectorAll('[data-job]').forEach(b=>b.onclick=()=>{const j=jobs.find(j=>j.id===b.dataset.job);openMedia(j.media_id,j.report?j.id:null);});}
 async function upload(file){if(state.uploading)return;if(!allowLeave())return;if(!file.size||file.size>4*1024**3){fail(new Error('Choose a nonempty file no larger than 4 GiB.'));return;}const role=state.view==='references'?'reference':'meeting';state.uploading=true;$('upload-button').disabled=true;$('upload-progress').hidden=false;$('upload-name').textContent=file.name;$('upload-percent').textContent='0%';$('upload-meter').value=0;try{const media=await new Promise((resolve,reject)=>{const xhr=new XMLHttpRequest();xhr.open('POST',`/api/upload?name=${encodeURIComponent(file.name)}&role=${role}`);xhr.setRequestHeader('X-Workbench-Token',state.csrf);xhr.setRequestHeader('Content-Type','application/octet-stream');xhr.upload.onprogress=e=>{if(e.lengthComputable){const percent=Math.round(e.loaded/e.total*100);$('upload-meter').value=percent;$('upload-percent').textContent=percent===100?'Saving locally…':`${percent}%`;}};xhr.onload=()=>{try{const body=JSON.parse(xhr.responseText);if(xhr.status>=200&&xhr.status<300)resolve(body);else reject(new Error(body.error||'Upload failed'));}catch{reject(new Error('Upload failed. Check the connection.'));}};xhr.onerror=()=>reject(new Error('Upload connection failed. The file was not saved.'));xhr.send(file);});state.dirty=false;state.labels={};await refresh();await openMedia(media.id);toast('Recording saved locally');}catch(error){fail(error);}finally{state.uploading=false;$('upload-button').disabled=false;$('upload-progress').hidden=true;$('file-input').value='';}}
@@ -269,3 +336,5 @@ function serverNeedsRestart() {
   const server = state.data?.server;
   return !server || server.protocol < 1 || server.restart_required === true;
 }
+
+setInterval(updateJobClocks, 1000);

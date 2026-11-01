@@ -11,6 +11,7 @@ from uuid import uuid4
 import numpy as np
 
 from .backends import Backend
+from .backends.base import ProgressCallback
 from .matching import centroid, match_embedding
 from .media import SUPPORTED_MEDIA, AnalysisRange, convert_to_wav, wav_duration
 from .profiles import ProfileBundle
@@ -80,6 +81,7 @@ def identify_speakers(
     max_speakers: int | None = None,
     start_seconds: float = 0,
     duration_seconds: float | None = None,
+    on_progress: ProgressCallback | None = None,
 ) -> dict[str, Any]:
     window = AnalysisRange(start_seconds, duration_seconds)
     if backend.model_id != profiles.model_id:
@@ -96,6 +98,8 @@ def identify_speakers(
     started_at = datetime.now(timezone.utc).isoformat()
     started = perf_counter()
     with tempfile.TemporaryDirectory(prefix="voice-id-target-") as temp_dir:
+        if on_progress:
+            on_progress("extracting_audio", None, None)
         range_options = {} if window.is_full else {
             "start_seconds": window.start_seconds, "duration_seconds": window.duration_seconds,
         }
@@ -103,8 +107,12 @@ def identify_speakers(
         processed_seconds = None if window.is_full else wav_duration(wav_path)
         if processed_seconds is not None and processed_seconds <= 0:
             raise ValueError("The selected range contains no audio. Choose an earlier start time.")
+        if on_progress:
+            on_progress("analyzing", None, None)
         output = backend.diarize(wav_path, min_speakers=min_speakers, max_speakers=max_speakers)
 
+    if on_progress:
+        on_progress("matching", None, None)
     cluster_matches = {
         label: match_embedding(
             embedding,

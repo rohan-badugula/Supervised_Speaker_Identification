@@ -70,8 +70,10 @@ with Full recording for an unlimited run; a zero-length section is rejected.
 Anonymous Person 1/2 labels can change between preview sections or runs; use saved
 voice profiles when comparing identities across them.
 
-Upload progress reports transferred bytes. Background jobs show processing stages,
-not an estimated inference percentage. One CPU worker processes jobs in order,
+Upload progress reports transferred bytes. Background jobs show persistent stages,
+elapsed time, worker heartbeat and measured chunk/batch progress where the model
+provides counts. Percentages apply only to the current stage; other stages remain
+indeterminate, with no invented overall percentage or ETA. One CPU worker processes jobs in order,
 with at most four active/queued jobs. Interrupted jobs are marked after restart;
 retry by starting a new run. Running inference cannot currently be cancelled.
 

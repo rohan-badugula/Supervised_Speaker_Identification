@@ -10,12 +10,16 @@ SUPPORTED_MEDIA = {".wav", ".flac", ".mp3", ".m4a", ".aac", ".ogg", ".mp4", ".mo
 
 def require_ffmpeg() -> str:
     executable = shutil.which("ffmpeg")
-    if executable is None:
+    if executable:
+        return executable
+    try:
+        from imageio_ffmpeg import get_ffmpeg_exe
+        return get_ffmpeg_exe()
+    except (ImportError, RuntimeError, OSError) as error:
         raise RuntimeError(
-            "ffmpeg is required to read video/audio files. On macOS install it with "
-            "`brew install ffmpeg`, then retry."
-        )
-    return executable
+            "FFmpeg is required. Install this project's audio extra with "
+            "`python -m pip install -e '.[audio]'`, then restart the workbench."
+        ) from error
 
 
 def convert_to_wav(source: Path, destination: Path) -> Path:

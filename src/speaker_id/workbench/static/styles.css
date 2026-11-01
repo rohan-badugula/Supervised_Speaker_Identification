@@ -117,3 +117,5 @@ dialog { width: min(510px,calc(100% - 32px)); color: var(--ink); background: var
 .run-footnote { color: #70795f; }
 .audio-readout>span:last-child { color: #9aa791; }
 .timeline-key { color: #637251; }
+
+#run-error { white-space: pre-line; display: block; font-size: 11px; line-height: 1.8; }

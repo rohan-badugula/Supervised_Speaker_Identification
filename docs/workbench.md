@@ -147,3 +147,25 @@ cannot mark another running instance's jobs interrupted. The replacement instanc
 performs normal restart recovery after the old process has exited. Restart aborts
 active processing; it does not resume model inference. Live tests launch two
 isolated subprocesses on a temporary port to verify replacement and the opt-out.
+
+
+## Analysis readiness and visible errors
+
+The state endpoint reports availability of system or packaged FFmpeg, the required
+audio packages, optional ECAPA and presence of HF_TOKEN. Preflight evaluates all
+blockers for the chosen model rather than returning only the first one. A rejected
+analysis request returns HTTP 409 with code setup_required and an issues list;
+no job is queued. The frontend preserves that payload and displays it in a focused
+alert inside the open run dialog. General page errors use the page-level alert.
+
+The audio extra now installs imageio-ffmpeg as a fallback for systems where
+Homebrew cannot install FFmpeg. The binary resolver is shared by conversion and
+readiness checks. The optional ffprobe probe still requires a system ffprobe;
+when absent, browser metadata supplies playback duration.
+
+Validation for this change: 53 Python tests and three Node UI regressions pass.
+The UI tests execute the actual app script in a minimal DOM fixture and simulate
+a rejected Analyze request, checking alert visibility and focus inside the dialog.
+Real packaged FFmpeg conversion and imports of torch, torchaudio, pyannote.audio
+and TorchCodec were checked in the project environment. The initial model download
+and actual speaker inference remain blocked until Hugging Face access is configured.

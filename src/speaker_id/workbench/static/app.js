@@ -8,10 +8,23 @@ const color = (name) => {let hash=0;for(const c of name) hash=(hash*31+c.charCod
 const time = (value) => {if(!Number.isFinite(value)) return '--:--';const n=Math.max(0,value);return `${Math.floor(n/3600)?`${Math.floor(n/3600)}:`:''}${String(Math.floor(n/60)%60).padStart(2,'0')}:${String(Math.floor(n)%60).padStart(2,'0')}`;};
 const precise = (n) => `${time(n)}.${String(Math.round((n%1)*1000)).padStart(3,'0')}`;
 const size = (n) => n>=1024**3?`${(n/1024**3).toFixed(1)} GB`:`${(n/1024**2).toFixed(1)} MB`;
-function fail(error){$('error-text').textContent=error.message||String(error);$('error-banner').hidden=false;}
+function fail(error) {
+  const message = [error.message || String(error), ...(error.details?.issues || [])].join('\n');
+  if ($('run-dialog').open) {
+    const banner = $('run-error');
+    banner.textContent = message;
+    banner.hidden = false;
+    banner.focus();
+    banner.scrollIntoView({block: 'nearest'});
+    return;
+  }
+  $('error-text').textContent = message;
+  $('error-banner').hidden = false;
+  $('error-banner').scrollIntoView({block: 'nearest'});
+}
 let toastTimer;
 function toast(text){$('toast').textContent=text;$('toast').hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').hidden=true,3200);}
-async function api(path,body){const response=await fetch(path,body===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json','X-Workbench-Token':state.csrf},body:JSON.stringify(body)});const data=await response.json();if(!response.ok)throw new Error(data.error||'Request failed');return data;}
+async function api(path,body){const response=await fetch(path,body===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json','X-Workbench-Token':state.csrf},body:JSON.stringify(body)});const data=await response.json();if(!response.ok){const error=new Error(data.error||'Request failed');error.details=data;throw error;}return data;}
 function unsaved(){return state.dirty||Object.keys(state.labels).length>0;}
 function allowLeave(){return !unsaved()||window.confirm('Discard unsaved labels or corrections?');}
 function markDirty(){state.dirty=true;$('save-status').textContent='Unsaved labels';}
@@ -159,7 +172,7 @@ function updatePlayback() {
   if (state.clipEnd !== null && player.currentTime >= state.clipEnd) { player.pause(); state.clipEnd = null; }
 }
 async function saveAnnotations(){if(!state.media)return;const saved=await api(`/api/media/${state.media.id}/annotations`,{annotations:state.annotations,revision:state.media.revision});state.media=saved;const i=state.data.media.findIndex(m=>m.id===saved.id);state.data.media[i]=saved;state.dirty=false;$('save-status').textContent='Labels saved';$('export-json').hidden=false;$('export-json').href=`/api/labels/${saved.id}`;toast('Reference labels saved locally');}
-async function runJob(){if(!state.media)return;if(state.media.role!=='reference'&&!allowLeave())return;$('run-button').disabled=true;try{const ref=state.media.role==='reference';if(ref&&state.dirty)await saveAnnotations();const body={kind:ref?'enroll':'identify',media_id:state.media.id,model:$('model-select').value};if(ref)body.name=$('collection-name').value;else Object.assign(body,{collection_id:$('collection-select').value||null,threshold:Number($('threshold').value),margin:Number($('margin').value),min_speakers:$('min-speakers').value||null,max_speakers:$('max-speakers').value||null});const job=await api('/api/jobs',body);state.jobId=job.id;state.labels={};state.data.jobs.unshift(job);updateCurrentJob();$('run-dialog').close();toast('Job queued. You can keep using the workbench.');await refresh();}catch(error){fail(error);}finally{$('run-button').disabled=false;updateCurrentJob();}}
+async function runJob(){if(!state.media)return;$('run-error').hidden=true;if(state.media.role!=='reference'&&!allowLeave())return;$('run-button').disabled=true;try{const ref=state.media.role==='reference';if(ref&&state.dirty)await saveAnnotations();const body={kind:ref?'enroll':'identify',media_id:state.media.id,model:$('model-select').value};if(ref)body.name=$('collection-name').value;else Object.assign(body,{collection_id:$('collection-select').value||null,threshold:Number($('threshold').value),margin:Number($('margin').value),min_speakers:$('min-speakers').value||null,max_speakers:$('max-speakers').value||null});const job=await api('/api/jobs',body);state.jobId=job.id;state.labels={};state.data.jobs.unshift(job);updateCurrentJob();$('run-dialog').close();toast('Job queued. You can keep using the workbench.');await refresh();}catch(error){fail(error);}finally{$('run-button').disabled=false;updateCurrentJob();}}
 function updateCurrentJob() {
   if (!state.media) return;
   const job = state.data.jobs.find(job => job.media_id === state.media.id);
@@ -193,7 +206,7 @@ function syncShell() {
   $('archive-count').textContent = String(count).padStart(2, '0');
 }
 $('brand-home').onclick = event => { event.preventDefault(); showView('meetings'); };
-$('configure-run').onclick = () => { updateSetup(); $('run-dialog').showModal(); };
+$('configure-run').onclick = () => { $('run-error').hidden=true; updateSetup(); $('run-dialog').showModal(); };
 $('close-run').onclick = () => $('run-dialog').close();
 $('play-toggle').onclick = () => { if ($('player').paused) $('player').play().catch(fail); else $('player').pause(); };
 $('skip-back').onclick = () => seek($('player').currentTime - 10);

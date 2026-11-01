@@ -61,8 +61,9 @@ with at most four active/queued jobs. Interrupted jobs are marked after restart;
 retry by starting a new run. Running inference cannot currently be cancelled.
 
 Uploads, playback and labeling need only the lightweight core. Processing requires
-FFmpeg, the appropriate audio extras, and `HF_TOKEN` model access as described
-below. **Local setup** in the UI shows what is missing. Common MP3 and MP4/H.264
+the appropriate audio extras and `HF_TOKEN` model access as described
+below. The audio extra includes a packaged FFmpeg binary used when system FFmpeg
+is unavailable. **Local setup** in the UI shows what is missing. Common MP3 and MP4/H.264
 files are recommended for playback; other browser codecs vary. Unsupported media
 may still be processable by FFmpeg even when the browser cannot play it.
 
@@ -201,7 +202,9 @@ data/enrollment/
     └── conference_0002_000028.900.wav
 ```
 
-Labeling works with only Python. Exporting clips and processing video/audio require FFmpeg. FFmpeg is not installed on this laptop yet:
+The standalone R&D labeler works with only Python; its clip export requires system
+FFmpeg. The integrated workbench can also use the FFmpeg binary bundled with the
+audio extra. To install system FFmpeg where supported:
 
 ```bash
 brew install ffmpeg
@@ -262,10 +265,32 @@ The command produces JSON and CSV timelines with start time, end time, detected 
 
 These are starting values, not universal truths. We will tune them using held-out clips from your actual conference room.
 
+## If Analyze appears not to start
+
+Open **Configure run** and inspect the readiness message. Missing dependencies or
+Hugging Face access prevent a job from being queued. Clicking Analyze now displays
+the exact error inside that dialog, with actionable setup blockers. Errors no
+longer appear behind the dialog. Model download/inference failures after queueing
+are retained under Runs and in the run status.
+
+After accepting the Community-1 model conditions and creating a read token, use
+this hidden prompt in zsh from the project directory, then restart the server:
+
+```bash
+read -s "HF_TOKEN?Hugging Face token: "; echo
+export HF_TOKEN
+.venv/bin/python tools/run_workbench.py
+```
+
+Refresh the browser after restarting. Your uploaded recordings remain in the local
+catalog; no re-upload is required. A configured token indicates credential presence,
+not confirmed model authorization—access failures are reported by the model loader.
+
 ## Test
 
 ```bash
 python -m pytest
+node --test tests/workbench_ui.test.cjs
 ```
 
 Tests cover the numerical core, backend contracts, profile compatibility, real localhost HTTP uploads/ranges, label persistence, background-job workflows, corrections and restart recovery. ML calls use stubs; these tests do not establish actual model accuracy. JavaScript syntax is checked with `node --check src/speaker_id/workbench/static/app.js`.

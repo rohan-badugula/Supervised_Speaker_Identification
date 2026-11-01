@@ -16,6 +16,7 @@ from uuid import uuid4
 
 from ..media import SUPPORTED_MEDIA
 from .service import Workbench
+from .runtime import RuntimeNotReady
 from .lifecycle import release_workbench_port
 
 STATIC = Path(__file__).parent / "static"
@@ -206,6 +207,9 @@ class Handler(BaseHTTPRequestHandler):
             self._error(error)
 
     def _error(self, error):
+        if isinstance(error, RuntimeNotReady):
+            self._json({"error": str(error), "code": "setup_required", "issues": error.issues}, 409)
+            return
         status = 403 if isinstance(error, PermissionError) else 404 if isinstance(error, FileNotFoundError) else 400
         if isinstance(error, (ValueError, RuntimeError, FileNotFoundError, PermissionError, TypeError)):
             self._json({"error": str(error)}, status)

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import importlib.util
 import math
 import os
 import shutil
@@ -23,6 +22,7 @@ from ..profiles import ProfileBundle, load_profiles, save_profiles
 from ..provenance import package_versions, sha256_file
 from ..reporting import build_summary, write_csv_report, write_json_report
 from .store import Store
+from .runtime import RuntimeNotReady, runtime_health, setup_issues
 
 
 ACTIVE = {"queued", "running"}
@@ -71,10 +71,7 @@ class Workbench:
     def state(self) -> dict:
         return {"media": self.store.list("media"), "collections": self.store.list("collection"),
                 "jobs": self.store.list("job"), "models": [asdict(spec) for spec in MODEL_SPECS],
-                "health": {"ffmpeg": bool(shutil.which("ffmpeg")),
-                           "audio": importlib.util.find_spec("pyannote") is not None,
-                           "ecapa": importlib.util.find_spec("speechbrain") is not None,
-                           "token": bool(os.environ.get("HF_TOKEN"))}}
+                "health": runtime_health()}
 
     def media_path(self, identity: str) -> Path:
         return self.store.path(self.store.get("media", identity)["path"])
@@ -149,13 +146,12 @@ class Workbench:
                 if job["min_speakers"] and job["max_speakers"] and job["min_speakers"] > job["max_speakers"]:
                     raise ValueError("Minimum speakers cannot exceed maximum speakers.")
             # Fail before queueing when the local runtime is not ready.
+            if self.backend_loader is load_backend:
+                issues = setup_issues(runtime_health(), ecapa=bool(spec.embedding_model))
+                if issues:
+                    raise RuntimeNotReady(issues)
             require_ffmpeg()
             resolve_token(None)
-            if self.backend_loader is load_backend:
-                if importlib.util.find_spec("pyannote") is None:
-                    raise ValueError("Audio models are not installed. See the Setup panel.")
-                if spec.embedding_model and importlib.util.find_spec("speechbrain") is None:
-                    raise ValueError("ECAPA is not installed. Select Community-1 or install the ECAPA extra.")
             job = self.store.save("job", job)
             self.pool.submit(self._run, job["id"])
             return job

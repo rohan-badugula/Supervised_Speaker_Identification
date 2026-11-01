@@ -13,8 +13,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-audio = ["pyannote.audio>=4.0,<5", "soundfile>=0.12,<1"]
-ecapa = ["pyannote.audio>=4.0,<5", "soundfile>=0.12,<1", "speechbrain>=1.0,<2"]
+audio = ["pyannote.audio>=4.0,<5", "soundfile>=0.12,<1", "imageio-ffmpeg>=0.6,<1"]
+ecapa = ["pyannote.audio>=4.0,<5", "soundfile>=0.12,<1", "imageio-ffmpeg>=0.6,<1", "speechbrain>=1.0,<2"]
 dev = ["pytest>=8,<10"]
 
 [project.scripts]

@@ -87,6 +87,24 @@ def test_port_conflict_does_not_interrupt_existing_catalog_jobs(web):
     assert server.app.store.get("job", job["id"])["status"] == "running"
 
 
+def test_setup_blockers_return_actionable_response_before_queueing(web, monkeypatch):
+    server, request = web
+    headers = {"X-Workbench-Token": server.token}
+    _, _, raw = request("POST", "/api/upload?name=test.mp4", b"audio", headers)
+    media = json.loads(raw)
+    monkeypatch.setattr("speaker_id.workbench.service.runtime_health",
+                        lambda: {"ffmpeg": False, "audio": False, "token": False, "ecapa": False})
+    status, _, body = request("POST", "/api/jobs", {
+        "kind": "identify", "media_id": media["id"], "model": "community-1",
+    }, headers)
+    assert status == 409
+    payload = json.loads(body)
+    assert payload["code"] == "setup_required"
+    assert len(payload["issues"]) == 3
+    assert any("HF_TOKEN" in issue for issue in payload["issues"])
+    assert server.app.store.list("job") == []
+
+
 def test_reference_labels_export_and_conflict_detection(web):
     server, request = web
     headers = {"X-Workbench-Token": server.token}

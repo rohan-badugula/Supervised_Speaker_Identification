@@ -49,3 +49,19 @@ class Store:
         if not path.is_relative_to(self.root):
             raise ValueError("Invalid workspace path.")
         return path
+
+    def claim_job(self, worker_id: str) -> dict | None:
+        """Atomically claim the oldest queued job across process boundaries."""
+        with self.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            rows = db.execute("SELECT id, body FROM records WHERE kind='job' ORDER BY updated").fetchall()
+            for identity, body in rows:
+                job = json.loads(body)
+                if job.get('status') != 'queued':
+                    continue
+                job.update(status='running', claimed_by=worker_id,
+                           updated=datetime.now(timezone.utc).isoformat())
+                db.execute("UPDATE records SET body=?, updated=? WHERE id=? AND kind='job'",
+                           (json.dumps(job, allow_nan=False), job['updated'], identity))
+                return job
+        return None

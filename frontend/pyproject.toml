@@ -10,6 +10,9 @@ requires-python = ">=3.11,<3.14"
 readme = "README.md"
 dependencies = []
 
+[project.scripts]
+voice-frontend = "speaker_frontend.server:main"
+
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["speaker_frontend*"]

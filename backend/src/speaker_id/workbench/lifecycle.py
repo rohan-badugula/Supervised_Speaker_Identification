@@ -37,7 +37,7 @@ def _is_workbench(pid: int, command: str) -> bool:
         args = shlex.split(command)
     except ValueError:
         return False
-    if len(args) >= 3 and args[1:3] == ["-m", "speaker_id.workbench.server"]:
+    if len(args) >= 3 and args[1] == "-m" and args[2] in {"speaker_id.workbench.server", "speaker_id.workbench.dev"}:
         return True
     if len(args) < 2:
         return False
@@ -54,7 +54,7 @@ def _is_workbench(pid: int, command: str) -> bool:
         # setuptools console entry point, including virtual-environment installs.
         if path.name == "voice-workbench" and path.is_file():
             try:
-                if "from speaker_id.workbench.server import main" in path.read_text():
+                if any(entry in path.read_text() for entry in ("from speaker_id.workbench.server import main", "from speaker_id.workbench.dev import main")):
                     return True
             except (OSError, UnicodeError):
                 pass

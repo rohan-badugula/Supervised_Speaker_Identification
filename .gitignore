@@ -28,3 +28,7 @@ results/**
 !data/annotations/.gitkeep
 !artifacts/.gitkeep
 !results/.gitkeep
+
+# Python package build outputs (root and independently packaged services).
+build/
+dist/

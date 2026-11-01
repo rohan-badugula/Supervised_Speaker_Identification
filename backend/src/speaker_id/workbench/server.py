@@ -19,9 +19,6 @@ from .service import Workbench
 from .runtime import RuntimeNotReady
 from .lifecycle import release_workbench_port
 
-from importlib.resources import files
-
-STATIC = Path(str(files("speaker_frontend") / "static"))
 MAX_UPLOAD = 4 * 1024 ** 3
 MAX_JSON = 5 * 1024 ** 2
 
@@ -149,7 +146,9 @@ class Handler(BaseHTTPRequestHandler):
         try:
             self._local_request()
             parts = urlparse(self.path).path.strip("/").split("/")
-            if parts == ["api", "state"]:
+            if parts == ["api", "health"]:
+                self._json({"service": "api", "status": "ok", "worker": self.server.app.worker_status()})
+            elif parts == ["api", "state"]:
                 self._json({**self.server.app.state(), "csrf": self.server.token})
             elif len(parts) == 3 and parts[:2] == ["api", "media"]:
                 self._file(self.server.app.media_path(parts[2]))
@@ -163,10 +162,6 @@ class Handler(BaseHTTPRequestHandler):
                 if parts[3] not in {"json", "csv"} or job["status"] != "completed" or not job.get("report"):
                     raise FileNotFoundError("Export not available.")
                 self._file(self.server.app.store.path(job["report"]).with_suffix("." + parts[3]), download=True)
-            elif parts == [""]:
-                self._file(STATIC / "index.html")
-            elif len(parts) == 1 and parts[0] in {"app.js", "styles.css"}:
-                self._file(STATIC / parts[0])
             else:
                 raise FileNotFoundError("Page not found.")
         except (BrokenPipeError, ConnectionResetError, socket.timeout):
@@ -258,7 +253,9 @@ class Handler(BaseHTTPRequestHandler):
 
 def main():
     parser = argparse.ArgumentParser(description="Local speaker-identification media workbench")
-    parser.add_argument("--port", type=int, default=8766)
+    parser.add_argument("--port", type=int, default=8767)
+    parser.add_argument("--embedded-worker", action="store_true", help="Development fallback: execute inside the API process")
+    parser.add_argument("--ready-file", type=Path, help=argparse.SUPPRESS)
     parser.add_argument("--data-dir", type=Path, default=Path("data/workbench"))
     parser.add_argument("--no-restart", action="store_true", help="Do not replace an existing workbench on this port")
     args = parser.parse_args()
@@ -266,15 +263,19 @@ def main():
         parser.error("Port must be between 0 and 65535.")
     try:
         try:
-            server = Server(("127.0.0.1", args.port), args.data_dir)
+            server = Server(("127.0.0.1", args.port), args.data_dir, execution_mode="embedded" if args.embedded_worker else "external")
         except OSError as error:
             if error.errno != errno.EADDRINUSE or args.no_restart:
                 raise
             release_workbench_port(args.port)
-            server = Server(("127.0.0.1", args.port), args.data_dir)
+            server = Server(("127.0.0.1", args.port), args.data_dir, execution_mode="embedded" if args.embedded_worker else "external")
     except (OSError, RuntimeError, subprocess.SubprocessError) as error:
         parser.exit(1, f"Could not start workbench: {error}\n")
-    print(f"Speaker workbench: http://127.0.0.1:{server.server_address[1]}", flush=True)
+    if args.ready_file:
+        temporary = args.ready_file.with_suffix(".tmp")
+        temporary.write_text(json.dumps({"port": server.server_address[1]}))
+        temporary.replace(args.ready_file)
+    print(f"Speaker API: http://127.0.0.1:{server.server_address[1]}", flush=True)
     print(f"Local workspace: {args.data_dir.resolve()}", flush=True)
     print(f"Python source revision: {server.app.source_revision[:12]}", flush=True)
     try:

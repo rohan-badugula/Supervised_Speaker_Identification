@@ -55,31 +55,50 @@ def validate_segments(items: object, duration: float | None = None) -> list[dict
 
 
 class Workbench:
-    def __init__(self, root: Path, *, backend_loader=load_backend):
+    def __init__(self, root: Path, *, backend_loader=load_backend, execution_mode="embedded"):
+        if execution_mode not in {"embedded", "external", "worker"}:
+            raise ValueError("Unknown execution mode.")
+        self.execution_mode = execution_mode
         self.source_revision = source_signature()
         self.started_at = datetime.now(timezone.utc).isoformat()
         self.store = Store(root)
         self.backend_loader = backend_loader
-        self.pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="voice-workbench")
+        self.pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="voice-workbench") if execution_mode == "embedded" else None
         self.lock = threading.RLock()
         self._last_progress_write = {}
         # A previous process cannot still own these jobs. Do not silently rerun ML.
         for job in self.store.list("job"):
-            if job["status"] in ACTIVE:
+            if execution_mode != "external" and job["status"] in (ACTIVE if execution_mode == "embedded" else {"running"}):
                 job.update(status="interrupted", stage="Interrupted by server restart",
                            error="Server stopped before this job finished. Start a new run to retry.")
                 self.store.save("job", job)
 
     def close(self):
-        self.pool.shutdown(wait=False, cancel_futures=True)
+        if self.pool:
+            self.pool.shutdown(wait=False, cancel_futures=True)
+
+    def worker_status(self) -> dict:
+        if self.execution_mode == "embedded":
+            return {"status": "embedded", "ready": True}
+        try:
+            worker = self.store.get("worker", "worker-service")
+        except FileNotFoundError:
+            return {"status": "unavailable", "ready": False}
+        age = (datetime.now(timezone.utc) - datetime.fromisoformat(worker['heartbeat_at'])).total_seconds()
+        worker['ready'] = worker['status'] == 'ready' and age <= 10
+        if age > 10:
+            worker['status'] = 'unavailable'
+        return worker
 
     def state(self) -> dict:
+        worker = self.worker_status()
+        health = (worker.get("health") or runtime_health()) if self.execution_mode == "external" else runtime_health()
         return {"media": self.store.list("media"), "collections": self.store.list("collection"),
                 "jobs": self.store.list("job"), "models": [asdict(spec) for spec in MODEL_SPECS],
-                "health": runtime_health(),
+                "health": health, "worker": worker,
                 "server": {"protocol": 1, "pid": os.getpid(), "started_at": self.started_at,
                            "source_revision": self.source_revision,
-                           "restart_required": self.source_revision != source_signature()}}
+                           "restart_required": self.source_revision != source_signature() or (worker.get("ready") and worker.get("source_revision", self.source_revision) != self.source_revision)}}
 
     def media_path(self, identity: str) -> Path:
         return self.store.path(self.store.get("media", identity)["path"])
@@ -165,14 +184,25 @@ class Workbench:
                 if job["min_speakers"] and job["max_speakers"] and job["min_speakers"] > job["max_speakers"]:
                     raise ValueError("Minimum speakers cannot exceed maximum speakers.")
             # Fail before queueing when the local runtime is not ready.
-            if self.backend_loader is load_backend:
+            if self.execution_mode == "external":
+                worker = self.worker_status()
+                if not worker.get("ready"):
+                    raise RuntimeNotReady(["The analysis worker is unavailable. Start or restart the workbench services."])
+                if worker.get("source_revision") != self.source_revision:
+                    raise RuntimeNotReady(["The worker is running outdated code. Restart the workbench services."])
+                issues = setup_issues(worker["health"], ecapa=bool(spec.embedding_model))
+                if issues:
+                    raise RuntimeNotReady(issues)
+            elif self.backend_loader is load_backend:
                 issues = setup_issues(runtime_health(), ecapa=bool(spec.embedding_model))
                 if issues:
                     raise RuntimeNotReady(issues)
-            require_ffmpeg()
-            resolve_token(None)
+            if self.execution_mode != "external":
+                require_ffmpeg()
+                resolve_token(None)
             job = self.store.save("job", job)
-            self.pool.submit(self._run, job["id"])
+            if self.pool:
+                self.pool.submit(self._run, job["id"])
             return job
 
     def _update(self, identity: str, **changes):

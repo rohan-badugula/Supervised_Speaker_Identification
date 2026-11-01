@@ -69,14 +69,13 @@ def test_local_request_protection_and_unsupported_upload(web):
     assert not server.app.store.list("media")
 
 
-def test_app_and_assets_are_served_without_external_dependencies(web):
+def test_api_serves_health_but_not_frontend_assets(web):
     _, request = web
-    for path, content_type in [("/", "text/html"), ("/app.js", "javascript"),
-                                ("/styles.css", "text/css")]:
-        status, headers, body = request("GET", path)
-        assert status == 200 and body
-        assert content_type in headers["Content-Type"]
-        assert "frame-ancestors 'none'" in headers["Content-Security-Policy"]
+    for path in ["/", "/app.js", "/styles.css"]:
+        assert request("GET", path)[0] == 404
+    status, headers, body = request("GET", "/api/health")
+    assert status == 200 and json.loads(body)["service"] == "api"
+    assert "frame-ancestors 'none'" in headers["Content-Security-Policy"]
 
 
 def test_port_conflict_does_not_interrupt_existing_catalog_jobs(web):

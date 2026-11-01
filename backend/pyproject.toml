@@ -19,7 +19,8 @@ dev = ["pytest>=8,<10"]
 
 [project.scripts]
 voice-id = "speaker_id.cli:main"
-voice-workbench = "speaker_id.workbench.server:main"
+voice-api = "speaker_id.workbench.server:main"
+voice-worker = "speaker_id.workbench.worker:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

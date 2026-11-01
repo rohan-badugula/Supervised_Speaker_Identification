@@ -1,4 +1,7 @@
 import http.client
+import json
+import os
+import signal
 import shutil
 import socket
 import subprocess
@@ -73,6 +76,26 @@ def test_second_launch_replaces_existing_workbench(tmp_path):
     try:
         first = launch()
         ready(first)
+        connection = http.client.HTTPConnection("127.0.0.1", port, timeout=2)
+        connection.request("GET", "/api/state")
+        current = json.loads(connection.getresponse().read())
+        connection.close()
+        old_services = [current["server"]["pid"], current["worker"]["pid"]]
+        assert len({first.pid, *old_services}) == 3
+        assert current["worker"]["ready"]
+        # A worker exit does not take down the frontend or API.
+        os.kill(current["worker"]["pid"], signal.SIGTERM)
+        deadline = time.monotonic()+5
+        while time.monotonic()<deadline:
+            connection = http.client.HTTPConnection("127.0.0.1", port, timeout=2)
+            connection.request("GET", "/api/state")
+            worker_state = json.loads(connection.getresponse().read())["worker"]
+            connection.close()
+            if not worker_state.get("ready"):
+                break
+            time.sleep(.05)
+        assert not worker_state["ready"]
+        assert first.poll() is None
         blocked = subprocess.run(command + ["--no-restart"], capture_output=True, text=True, timeout=10)
         assert blocked.returncode != 0
         assert first.poll() is None
@@ -80,6 +103,7 @@ def test_second_launch_replaces_existing_workbench(tmp_path):
         ready(second, previous=first)
         assert first.wait(timeout=2) != 0
         assert second.poll() is None
+        assert all(not lifecycle._command(pid) for pid in old_services)
     finally:
         for process in processes:
             if process.poll() is None:

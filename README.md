@@ -29,12 +29,15 @@ From this project folder, start the UI with the existing virtual environment:
 ```
 
 Open **http://127.0.0.1:8766**. After installing the package, `voice-workbench`
-starts the same app. Stop it with Ctrl+C. `--port` and `--data-dir` are available.
+starts the same app. This launches the frontend, API and inference worker in separate processes.
+Stop all three with Ctrl+C. `--port`, `--api-port` and `--data-dir` are available.
 Running the same command again automatically replaces an existing workbench on
 that port (macOS/Linux, using `lsof`). It checks the listener's process entry point
 before sending termination signals; unrelated applications are left running.
 Use `--no-restart` to disable replacement or `--port 8767` to use another port.
-Restarting stops active work; unfinished jobs are marked interrupted on startup.
+Restarting stops active work. Running jobs become interrupted when the worker
+restarts; queued jobs persist and are picked up in order. An interrupted analysis
+is never silently retried.
 
 1. Open **Reference room** and upload a separate reference MP3/MP4.
 2. Mark clean in/out points with the buttons or I/O shortcuts, assign dummy labels
@@ -72,7 +75,8 @@ voice profiles when comparing identities across them.
 
 Upload progress reports transferred bytes. Background jobs show processing stages,
 not an estimated inference percentage. One CPU worker processes jobs in order,
-with at most four active/queued jobs. Interrupted jobs are marked after restart;
+with at most four active/queued jobs. The API queues jobs durably; a separate
+worker claims them. Interrupted jobs are marked after worker restart;
 retry by starting a new run. Running inference cannot currently be cancelled.
 
 Uploads, playback and labeling need only the lightweight core. Processing requires
@@ -328,11 +332,38 @@ Refresh the browser after restarting. Your uploaded recordings remain in the loc
 catalog; no re-upload is required. A configured token indicates credential presence,
 not confirmed model authorization—access failures are reported by the model loader.
 
+## Project structure and services
+
+```text
+frontend/
+  speaker_frontend/static/  # Restored HTML, CSS and JavaScript
+  speaker_frontend/server.py # Static server and streaming API gateway
+  tests/                    # Frontend behavior tests
+  pyproject.toml            # Independently packaged frontend; no ML dependencies
+backend/
+  src/speaker_id/            # Models, matching, reports, API and worker
+  pyproject.toml            # Independently packaged backend and audio extras
+tests/                     # Backend and service integration tests (root tests/)
+tools/                     # One-command launcher and R&D clip labeler
+data/workbench/            # Existing private local data; Git-ignored
+```
+
+The browser uses the frontend on port **8766**. Its `/api/*` requests stream to a
+private localhost API port selected at startup. The API owns uploads, labels,
+profiles, reports and job submission; the worker owns expensive audio/model work.
+The restored interface is unchanged. Existing `data/workbench/` files need no migration.
+
+This is a local service-oriented architecture with separate processes and a shared
+SQLite catalog/filesystem. It is not a distributed microservice deployment.
+[Service boundaries, independent startup and recovery](docs/services.md) explain
+what is implemented and the next deployment/scaling steps. The root `pyproject.toml`
+keeps `pip install -e '.[audio,dev]'` compatible for convenient local development.
+
 ## Test
 
 ```bash
 python -m pytest
-node --test tests/workbench_ui.test.cjs
+node --test frontend/tests/workbench_ui.test.cjs
 ```
 
-Tests cover the numerical core, backend contracts, profile compatibility, real localhost HTTP uploads/ranges, label persistence, background-job workflows, corrections and restart recovery. ML calls use stubs; these tests do not establish actual model accuracy. JavaScript syntax is checked with `node --check src/speaker_id/workbench/static/app.js`.
+Tests cover the numerical core, backend contracts, profile compatibility, real localhost HTTP uploads/ranges, label persistence, background-job workflows, corrections and restart recovery. ML calls use stubs; these tests do not establish actual model accuracy. JavaScript syntax is checked with `node --check frontend/speaker_frontend/static/app.js`.

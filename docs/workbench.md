@@ -27,17 +27,22 @@ The Python package includes the static assets and a `voice-workbench` entry poin
 
 ## Request and data flow
 
+See [services.md](services.md) for process boundaries, independent startup and recovery.
+
+
 ```mermaid
 flowchart TD
-    Browser[Local browser] --> HTTP[Loopback HTTP server]
-    HTTP --> Catalog[SQLite catalog]
-    HTTP --> Files[Ignored local media and artifacts]
-    HTTP --> Queue[Single-worker background queue]
-    Queue --> FFmpeg[FFmpeg audio extraction]
+    Browser[Local browser] --> Frontend[Frontend and same-origin gateway]
+    Frontend --> API[Backend HTTP API]
+    API --> Catalog[SQLite catalog and durable queue]
+    API --> Files[Ignored media and artifacts]
+    Worker[Separate inference worker] --> Catalog
+    Worker --> Files
+    Worker --> FFmpeg[Audio extraction]
     FFmpeg --> Adapter[Selected model backend]
     Adapter --> Matching[Shared matching and rejection]
     Matching --> Report[JSON and CSV report]
-    Report --> Browser
+    Report --> Files
 ```
 
 `server.py` streams uploads to disk in blocks rather than loading an hour-long
@@ -55,17 +60,20 @@ builds model-compatible centroids and persists an NPZ plus JSON metadata. It doe
 not update model weights. An identification job either reuses the shared named
 identification pipeline or assigns anonymous names by first cluster appearance.
 
-Jobs survive in the catalog, but in-flight execution does not survive a process
-restart. Previously queued/running jobs are marked interrupted, without silently
-re-running expensive inference. A single worker prevents concurrent models from
-competing for laptop resources. Queue capacity is four jobs. Per-reference clip
-extraction has a timeout; full inference has no hard timeout or cancellation yet.
+The API persists queued jobs; a separate process atomically claims the oldest job.
+One worker holds an OS lease per local workspace. API restarts leave its active
+work alone. On worker restart, abandoned running jobs become interrupted; queued
+jobs remain queued and are processed in order. Interrupted work is not silently
+retried. Queue capacity is four active/queued jobs. Full inference has no hard
+timeout or user-facing cancellation yet. Heartbeat health is separate from model
+progress, and a stale heartbeat alone does not prove an operation is hung.
 
 ## Local API
 
 | Method | Route | Purpose |
 | --- | --- | --- |
-| GET | `/api/state` | Catalog, models, readiness and session write token |
+| GET | `/api/state` | Catalog, models, worker health and session write token |
+| GET | `/api/health` | API availability and worker heartbeat readiness |
 | POST | `/api/upload?name=...&role=meeting` | Raw streamed file upload; role may be reference |
 | GET / HEAD | `/api/media/<id>` | Original file with byte-range support |
 | POST | `/api/media/<id>/duration` | Browser-detected duration when server probe is unavailable |
@@ -103,7 +111,7 @@ format support are distinct.
 Local tests exercise uploads, content ranges including suffix ranges, HEAD,
 foreign-origin rejection, stale-label conflicts, persisted annotations, synthetic
 profile generation and reuse, backend compatibility, overlapping reports, manual
-corrections and interrupted-job recovery. After the interface rollback, the suite passes 75 Python
+corrections and interrupted-job recovery. After service separation, the suite passes 86 Python
 tests and seven frontend tests. JavaScript syntax is also checked with Node.
 JSON and CSV exports use atomic file replacement, so readers never see a partial
 individual export; the two formats are not one multi-file transaction.
@@ -156,8 +164,10 @@ this behavior; `--port` can select a different port. This implementation targets
 macOS/Linux with lsof available.
 
 The server binds before opening the workspace catalog, so an unsuccessful launch
-cannot mark another running instance's jobs interrupted. The replacement instance
-performs normal restart recovery after the old process has exited. Restart aborts
+cannot mark another running instance's jobs interrupted. The replacement worker
+performs running-job recovery after acquiring its exclusive workspace lease.
+Queued work remains durable. The supervisor stops its previous API/worker children
+before replacement; an API restart alone does not recover or interrupt jobs. Restart aborts
 active processing; it does not resume model inference. Live tests launch two
 isolated subprocesses on a temporary port to verify replacement and the opt-out.
 

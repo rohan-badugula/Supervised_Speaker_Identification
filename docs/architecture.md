@@ -7,6 +7,14 @@ Multiple speakers can occupy the same time interval. Unsupported or uncertain
 identities remain UNKNOWN. Transcription and Gemini integration are downstream.
 A run selects one model configuration before processing and keeps it for the run.
 
+## Service topology
+
+The repository now separates `frontend/` from `backend/`, and the local launcher
+runs frontend/gateway, API and inference worker as separate processes. The shared
+SQLite queue is durable with atomic claims and an exclusive single-worker lease.
+This is a single-host service-oriented foundation. See [services.md](services.md)
+for operating contracts, recovery limits and the path to distributed services.
+
 ## Boundaries
 
 1. CLI selects a registry entry and checks voiceprint compatibility before loading models.
@@ -74,7 +82,8 @@ Frontend progress/readability and workflow acceptance are reopened in the roadma
 - [ ] Add authenticated application API, job queue, cancellation, resource limits,
       structured logs, deletion/retention controls and integration tests.
 - [x] Local UI model selection, enrollment labeling, saved collections and timeline review.
-- [x] Local HTTP API, serialized background jobs and restart-state recovery.
+- [x] Separate frontend/API/worker processes, streaming gateway, durable local queue
+      and running-job recovery after a worker restart.
 - [ ] Integrate Gemini and spoken-word transcription.
 - [ ] Package deployment, run load/recovery checks and document operating procedures.
 

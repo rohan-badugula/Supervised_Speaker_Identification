@@ -70,6 +70,20 @@ mode selection, preview and retry improvements. Resume the ordered functional
 roadmap below. First-user, browser-upload and accessibility verification gaps from
 milestone 2 remain open; closing this exploration does not mark those checks done.
 
+## Service separation — Implemented
+
+- [x] Separate frontend and backend source trees and package metadata.
+- [x] Preserve the restored UI and existing private-data location.
+- [x] Serve frontend assets independently; stream same-origin API uploads and playback.
+- [x] Separate inference worker with a durable FIFO queue and exclusive workspace lease.
+- [x] One-command supervision, health reporting, port replacement and child cleanup.
+- [x] Test gateway security, process boundaries, atomic claims and worker-crash recovery.
+- [x] Document the shared-store constraint and independent service commands.
+
+Next infrastructure steps belong to milestone 7, after model evaluation provides
+real operating requirements. Separate processes do not alone establish distributed
+microservice readiness or speaker accuracy.
+
 ## Milestone 3 — Make review and correction useful
 
 - [ ] Keep active turns and playhead synchronized without losing editing focus.
@@ -125,7 +139,8 @@ every component is not a requirement for a strong engineering project.
 
 - [ ] Lock tested dependencies and exact model/checkpoint revisions.
 - [ ] Version and validate API/report schemas; separate client errors from system failures.
-- [ ] Worker process isolation, safe cancellation, queue recovery and resource limits.
+- [x] Separate frontend/API/worker processes, atomic durable queue claims and worker-crash recovery on restart.
+- [ ] Safe cancellation, broader resource limits and multi-host queue/storage infrastructure.
 - [ ] Secure credential persistence (Keychain for this Mac), redacted diagnostics and retention controls.
 - [ ] Tests using real small audio fixtures and optional cached-model integration checks.
 - [ ] Browser interaction/accessibility tests, CI regression gates and package-install tests.
@@ -179,3 +194,8 @@ just a feature count or number of models.
   retaining backend fixes/progress instrumentation and the displayed-report
   correction safeguard. UI milestone acceptance is reopened rather than implying
   the reverted progress panels and workflow are still present.
+
+- 2026-11-01: Separated frontend/backend packages and frontend/API/worker processes,
+  retaining the restored UI. Verified 86 Python and seven frontend tests, including
+  streamed uploads, media ranges, worker isolation, atomic claims, crash recovery
+  and supervised port replacement. Standalone service wheels build independently.

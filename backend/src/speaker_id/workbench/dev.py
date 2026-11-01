@@ -12,7 +12,7 @@ import tempfile
 import threading
 import time
 from pathlib import Path
-from urllib.request import urlopen
+from http.client import HTTPConnection
 
 from speaker_frontend.server import FrontendServer
 from .lifecycle import release_workbench_port
@@ -44,7 +44,8 @@ def main():
     server = None
     monitor_stop = threading.Event()
     root = args.data_dir.resolve()
-    # The API and frontend never receive the model credential. Only the worker does.
+    # The API subprocess omits HF_TOKEN. The launcher passes its shell environment
+    # to the worker; no model token is transmitted by the browser or gateway.
     api_environment = dict(os.environ)
     api_environment.pop('HF_TOKEN', None)
     previous_handlers = {}
@@ -83,8 +84,12 @@ def main():
             while True:
                 if worker.poll() is not None:
                     raise RuntimeError('The analysis worker exited during startup (check its workspace lease).')
-                with urlopen(f'http://127.0.0.1:{port}/api/health', timeout=2) as response:
-                    worker_health = json.load(response)['worker']
+                connection = HTTPConnection('127.0.0.1', port, timeout=2)
+                try:
+                    connection.request('GET', '/api/health')
+                    worker_health = json.load(connection.getresponse())['worker']
+                finally:
+                    connection.close()
                 if worker_health.get('ready'):
                     break
                 if time.monotonic()>deadline:

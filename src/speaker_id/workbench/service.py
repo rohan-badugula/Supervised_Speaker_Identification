@@ -188,7 +188,9 @@ class Workbench:
             token = os.environ.get("HF_TOKEN")
             if token:
                 message = message.replace(token, "[redacted]")
-            self._update(identity, status="failed", stage="Processing failed", error=message)
+            failed_stage = self.store.get("job", identity)["stage"]
+            self._update(identity, status="failed", stage="Processing failed", failed_stage=failed_stage,
+                         elapsed_seconds=round(perf_counter() - started, 2), error=message)
 
     def _enroll(self, job, backend, source):
         self._update(job["id"], stage="Extracting clean reference clips")

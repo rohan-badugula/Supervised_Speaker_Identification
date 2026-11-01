@@ -71,6 +71,22 @@ class PyannoteBackend:
             value = self.encoder.encode_batch(torch.from_numpy(samples).unsqueeze(0))
         return value.detach().cpu().numpy().reshape(-1)
 
+    @staticmethod
+    def _audio_input(wav_path: Path) -> dict:
+        """Decode our PCM WAV with libsndfile, bypassing TorchCodec's FFmpeg ABI.
+
+        The packaged FFmpeg executable can convert media without supplying the
+        shared FFmpeg libraries that TorchCodec requires for file-path inputs.
+        Pyannote officially accepts this in-memory (channels, samples) input.
+        """
+        import soundfile as sf
+        import torch
+
+        samples, rate = sf.read(wav_path, dtype="float32")
+        if rate != 16000 or samples.ndim != 1 or not len(samples):
+            raise ValueError("Backend inputs must be nonempty mono 16 kHz WAV files.")
+        return {"waveform": torch.from_numpy(samples).unsqueeze(0), "sample_rate": rate}
+
     def embed_enrollment(self, wav_path: Path) -> np.ndarray:
         if self.encoder is not None:
             import soundfile as sf
@@ -81,7 +97,7 @@ class PyannoteBackend:
             # Bound encoder memory even when a multi-minute sample is supplied.
             chunks = [samples[index:index + 160000] for index in range(0, len(samples), 160000)]
             return centroid([self._encode(chunk) for chunk in chunks if len(chunk) >= 16000])
-        output = self.pipeline(str(wav_path), num_speakers=1)
+        output = self.pipeline(self._audio_input(wav_path), num_speakers=1)
         embeddings = np.asarray(output.speaker_embeddings, dtype=np.float32)
         if embeddings.ndim != 2 or embeddings.shape[0] != 1:
             raise RuntimeError(f"Expected one speaker embedding for enrollment clip: {wav_path}")
@@ -91,7 +107,7 @@ class PyannoteBackend:
         options = {key: value for key, value in {
             "min_speakers": min_speakers, "max_speakers": max_speakers,
         }.items() if value is not None}
-        output = self.pipeline(str(wav_path), **options)
+        output = self.pipeline(self._audio_input(wav_path), **options)
         annotation = output.speaker_diarization
         turns = tuple(Turn(float(turn.start), float(turn.end), str(label))
                       for turn, _, label in annotation.itertracks(yield_label=True))

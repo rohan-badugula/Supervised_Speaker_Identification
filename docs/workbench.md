@@ -198,3 +198,25 @@ ranges, precise FFmpeg seek/duration arguments, real bounded audio extraction,
 named/anonymous original-time offsets, overlapping turns, actual end-of-file
 bounds, presets and playhead selection. Model accuracy on partial recordings is
 not established by these tests.
+
+
+## TorchCodec failure and direct waveform input
+
+A real user run failed with `Could not load libtorchcodec`. Importing the audio
+packages had passed earlier, but TorchCodec can defer native-library loading until
+it actually decodes a file. A standalone packaged FFmpeg executable is sufficient
+for our conversion subprocess; it does not provide TorchCodec's shared FFmpeg ABI.
+
+The pyannote adapter now reads our mono 16 kHz WAV with SoundFile and passes a
+`{"waveform": channel-first float32 tensor, "sample_rate": 16000}` dictionary to
+the pipeline. Both meeting diarization and native enrollment use this path.
+File-path decoding is no longer used by the adapter. This is pyannote's supported
+in-memory input interface, not a framework monkey-patch or a change to model weights.
+
+Validation: cached Community-1 weights loaded offline and completed actual CPU
+inference on a three-second synthetic tone, returning zero turns as expected for
+non-speech. This verifies the execution path, not identification accuracy. All
+71 Python tests and five UI tests passed; new tests assert waveform use in both
+native paths and validate the input shape/rate. Failed jobs now record their last
+processing stage and elapsed time. A previously failed job stays failed; users
+restart the updated server and submit a new run to retry.

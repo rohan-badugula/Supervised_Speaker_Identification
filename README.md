@@ -128,8 +128,9 @@ Two model configurations can be selected before each run:
 | `community-1` (default) | Community-1 | Native pyannote embeddings |
 | `community-1-ecapa` | Community-1 | SpeechBrain ECAPA-TDNN from non-overlapping regions |
 
-Both adapters are implemented; real-model inference has not yet been verified on
-this machine. ECAPA is an optional dependency. These configurations share the same
+Both adapters are implemented. Community-1 has passed a real-model inference
+smoke check on synthetic audio; ECAPA with actual weights and conference-room
+accuracy remain unverified. ECAPA is an optional dependency. These configurations share the same
 diarizer and compare different identity embedding strategies. A different diarizer
 can be added behind the same backend interface.
 
@@ -296,6 +297,12 @@ read -s "HF_TOKEN?Hugging Face token: "; echo
 export HF_TOKEN
 .venv/bin/python tools/run_workbench.py
 ```
+
+If a run fails with **Could not load libtorchcodec**, update/restart the workbench
+and start a new run. The adapter now reads the converted WAV using SoundFile and
+passes a channel-first waveform directly to pyannote, avoiding TorchCodec's
+file-path decoder and its shared-FFmpeg requirement. Existing failed jobs remain
+in history; retrying creates a new job.
 
 Refresh the browser after restarting. Your uploaded recordings remain in the local
 catalog; no re-upload is required. A configured token indicates credential presence,

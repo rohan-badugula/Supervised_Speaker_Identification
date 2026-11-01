@@ -39,6 +39,7 @@ def test_identification_preserves_overlap_in_reports(monkeypatch, tmp_path: Path
 
     spec = ModelSpec("test", "test-model", "test-model", None, "test")
     backend = PyannoteBackend(spec, lambda *args, **kwargs: output)
+    monkeypatch.setattr(backend, "_audio_input", lambda path: {"waveform": np.zeros((1, 16000)), "sample_rate": 16000})
     report = identify_speakers(backend, tmp_path / "meeting.wav", profiles)
 
     segments = report["segments"]

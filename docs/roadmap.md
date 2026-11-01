@@ -20,7 +20,7 @@ not model training. New speakers do not require retraining the network.
 A precise project description is: **an offline speaker-diarization and
 enrollment-based identification workbench for shared-microphone meetings**.
 
-## Milestone 1 — Make processing understandable (implemented)
+## Milestone 1 — Make processing understandable (backend retained; UI rolled back)
 
 Problem: users cannot tell whether a job is queued, preparing, progressing,
 failed or complete, and useful text is too small. Important state disappears
@@ -28,14 +28,14 @@ inside run configuration or on narrow layouts.
 
 Scope:
 
-- [x] Persistent job status outside the configuration dialog, visible while playing media.
-- [x] Separate queue, model preparation, extraction, inference, matching and saving stages.
-- [x] Show actual model chunk/batch counts and stage percentage when provided.
-- [x] Explicit indeterminate states when no meaningful total is available; no fake overall percentage or ETA.
-- [x] Elapsed time, last reported progress and clear terminal outcome.
-- [x] Bounded stage-event history for troubleshooting, surviving page refresh.
-- [x] Larger readable text and controls, stronger contrast and visible status on narrow screens.
-- [x] Tests for progress persistence, hook forwarding, failures and frontend rendering.
+- [ ] Persistent job status outside the configuration dialog, visible while playing media.
+- [ ] Separate queue, model preparation, extraction, inference, matching and saving stages.
+- [ ] Show actual model chunk/batch counts and stage percentage when provided.
+- [ ] Explicit indeterminate states when no meaningful total is available; no fake overall percentage or ETA.
+- [ ] Elapsed time, last reported progress and clear terminal outcome.
+- [x] Backend persists bounded stage-event history and measured counters; the restored UI does not expose these panels.
+- [ ] Larger readable text and controls, stronger contrast and visible status on narrow screens.
+- [ ] Tests for progress persistence, hook forwarding, failures and frontend rendering.
 
 Exit: after starting a five-minute run, the user can see what it is doing without
 opening a modal, and can distinguish a model that is processing from a failed job.
@@ -43,17 +43,17 @@ Model preparation may include downloads, so its duration remains unknown unless
 we add a real download counter later. Silence in progress events is not by itself
 proof that a process is hung.
 
-## Milestone 2 — Make the primary workflow intuitive (implemented; user/device review pending)
+## Milestone 2 — Make the primary workflow intuitive (UI rolled back)
 
 Scope:
 
 - [ ] Review upload → choose mode/range → run → review with a first-time user.
-- [x] Name anonymous analysis and enrolled identification explicitly; explain the difference in the UI.
-- [x] Surface local readiness before a run; explain that gated access is checked during model loading.
-- [x] Make starting an analysis a discoverable action; keep expert settings secondary.
-- [x] Show selected recording, range, model and voice collection together before submission.
-- [x] Preserve choices, provide actionable retry and make partial-run results unmistakable.
-- [x] Inspect desktop controls, microcopy, keyboard submission and increased-zoom behavior.
+- [ ] Name anonymous analysis and enrolled identification explicitly; explain the difference in the UI.
+- [ ] Surface local readiness before a run; explain that gated access is checked during model loading.
+- [ ] Make starting an analysis a discoverable action; keep expert settings secondary.
+- [ ] Show selected recording, range, model and voice collection together before submission.
+- [ ] Preserve choices, provide actionable retry and make partial-run results unmistakable.
+- [ ] Inspect desktop controls, microcopy, keyboard submission and increased-zoom behavior.
 - [ ] Complete mobile/cross-browser and screen-reader checks; resolve native Safari upload-picker verification.
 
 Exit: a new user can start an anonymous preview and find the saved results without
@@ -173,3 +173,9 @@ just a feature count or number of models.
 
 - 2026-11-01: Owner preferred the current UI over all three concepts. Closed
   visual exploration and cancelled the proposed redesign; resume functional work.
+
+- 2026-11-01: Owner requested the interface from the time of the original small-text
+  complaint. Restored the frontend from 8fc4b26 (before 4fbf06c and ab867a6),
+  retaining backend fixes/progress instrumentation and the displayed-report
+  correction safeguard. UI milestone acceptance is reopened rather than implying
+  the reverted progress panels and workflow are still present.

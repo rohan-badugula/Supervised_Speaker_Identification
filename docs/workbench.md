@@ -1,5 +1,15 @@
 # Local workbench
 
+## Current interface version
+
+At the owner's request, the frontend is restored to 8fc4b26, before the small-text
+and progress/workflow UI changes. Backend model/decoder fixes and persisted progress
+instrumentation remain. Configure run, the original typography and full-recording
+default are restored; persistent work-surface progress, explicit mode radios,
+run summaries and tab-local drafts are no longer part of the current interface.
+Correction requests still target the displayed report ID. Sections describing the
+later redesign below are historical implementation notes, not current UI promises.
+
 ## Implemented experience
 
 The application has four views: Sessions, Reference room, Voice bank and
@@ -10,7 +20,7 @@ marking and quality controls. Profiles are reusable and specific to a model reci
 The browser uses plain HTML/CSS/JavaScript and an HTML media element with an
 accessible custom transport. The editor exposes playback, ten-second jumps,
 scrubbing, speed and video fullscreen. Model/profile settings open in a dialog
-from Analyze speakers (or Build voice profiles for references). Speaker tracks sit beneath playback, alongside the review
+from Configure run. Speaker tracks sit beneath playback, alongside the review
 log on wide screens; narrow screens stack the panels. No external
 fonts, CDN scripts, analytics, cloud storage or frontend build tool are required.
 The Python package includes the static assets and a `voice-workbench` entry point.
@@ -93,8 +103,8 @@ format support are distinct.
 Local tests exercise uploads, content ranges including suffix ranges, HEAD,
 foreign-origin rejection, stale-label conflicts, persisted annotations, synthetic
 profile generation and reuse, backend compatibility, overlapping reports, manual
-corrections and interrupted-job recovery. The current local suite passes 75 Python
-tests and 19 frontend tests. JavaScript syntax is also checked with Node.
+corrections and interrupted-job recovery. After the interface rollback, the suite passes 75 Python
+tests and seven frontend tests. JavaScript syntax is also checked with Node.
 JSON and CSV exports use atomic file replacement, so readers never see a partial
 individual export; the two formats are not one multi-file transaction.
 
@@ -240,7 +250,7 @@ is still an explicit terminal action and preserves the environment of the termin
 used to launch it; the UI never reads or transfers the Hugging Face token.
 
 
-## Primary workflow recovery (milestone 2)
+## Primary workflow recovery (milestone 2; historical, UI reverted)
 
 Analyze speakers is the visible entry point from a meeting. Explicit radio choices
 separate anonymous clustering from saved-profile identification. New recordings

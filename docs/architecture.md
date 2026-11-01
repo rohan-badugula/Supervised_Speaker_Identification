@@ -53,7 +53,8 @@ publishing benchmark claims. Avoid selecting thresholds on the test set.
 ## Delivery milestones
 
 The ordered next-step plan and acceptance criteria are in [roadmap.md](roadmap.md).
-UX progress visibility and readability are implemented in milestone 1; primary-workflow usability is next.
+Backend progress instrumentation is implemented; the owner restored the earlier UI.
+Frontend progress/readability and workflow acceptance are reopened in the roadmap.
 
 
 - [x] Backend contract, registry and two selectable adapter configurations.

@@ -36,20 +36,18 @@ before sending termination signals; unrelated applications are left running.
 Use `--no-restart` to disable replacement or `--port 8767` to use another port.
 Restarting stops active work; unfinished jobs are marked interrupted on startup.
 
-1. Open **Sessions**, import an MP3/MP4 or another supported recording, then choose
-   **Analyze speakers**. **Anonymous speakers** needs no voice samples. A new
-   recording defaults to the first five minutes; choose **Full recording** explicitly
-   when ready for a longer run.
-2. Check the recording, range, model and labeling mode in **This run**, then start.
-   Setup blockers appear before submission; progress remains visible after the dialog closes.
-3. Review the saved timeline, jump to speaker timestamps, correct labels and export
-   JSON/CSV. A section result shows its actual range in the original recording.
-4. To recognize saved voices, open **Reference room**, import separate reference
-   media, mark clean in/out points, assign Person 1/2 labels and save reference labels.
-   Select **Build voice profiles**, choose a model and collection name, then build.
-5. Return to the meeting and choose **Recognize saved voices** with that model's
-   collection. Profiles remain local across server sessions. Anonymous labels can
-   change between runs and do not establish identity across recordings.
+1. Open **Reference room** and upload a separate reference MP3/MP4.
+2. Mark clean in/out points with the buttons or I/O shortcuts, assign dummy labels
+   such as Person 1 and Person 2, and **Save labels**. Quality flags and inclusion
+   checkboxes keep questionable clips out of enrollment.
+3. Open **Configure run**, choose a model and collection name, then **Build profiles**. The resulting
+   voiceprints and source-label metadata are retained locally across sessions.
+4. Open **Sessions**, import the target recording, open **Configure run**, select
+   that model and collection, and **Analyze speakers**. Alternatively, choose anonymous mode without profiles;
+   anonymous Person 1/2 labels only have meaning within that recording.
+5. Click speaker tracks or timestamps in the review log to seek. Overlapping speakers have
+   separate tracks and appear together over playback. Zoom, filter, correct labels,
+   and export JSON/CSV. Corrections preserve the original model report separately.
 
 The session editor keeps the playback canvas and speaker tracks together on the
 left, with an editable speaker log on the right. A dedicated transport provides
@@ -57,13 +55,10 @@ play/pause, ten-second jumps, scrubbing, speed and video fullscreen. Run setting
 open in a separate dialog. The archive, reference room, voice bank and run history
 are available from the top navigation; smaller screens stack the editor panels.
 
-For a quick test of a long meeting, open **Analyze speakers → How much should we analyze?**.
+For a quick test of a long meeting, open **Configure run → Analysis range**.
 Choose Full recording, the first 5/10/15/30 minutes, the first hour, or a custom
-section with a start and length in minutes. **Use playhead as start · 10-minute section**
-uses the current playback position. Five minutes is the initial default. Choices
-are preserved per recording in this browser tab across refreshes; retry restores
-the failed run settings. Closing the tab clears browser drafts, while server-side
-recordings, profiles and runs stay saved.
+section with a start and length in minutes. **Start a 10-minute preview here**
+uses the current playback position. Full recording remains the default.
 
 Only the selected section is extracted and sent to the model. The original video
 is unchanged, and output timestamps are offset back to the original recording.
@@ -75,10 +70,8 @@ with Full recording for an unlimited run; a zero-length section is rejected.
 Anonymous Person 1/2 labels can change between preview sections or runs; use saved
 voice profiles when comparing identities across them.
 
-Upload progress reports transferred bytes. Background jobs show persistent stages,
-elapsed time, worker heartbeat and measured chunk/batch progress where the model
-provides counts. Percentages apply only to the current stage; other stages remain
-indeterminate, with no invented overall percentage or ETA. One CPU worker processes jobs in order,
+Upload progress reports transferred bytes. Background jobs show processing stages,
+not an estimated inference percentage. One CPU worker processes jobs in order,
 with at most four active/queued jobs. Interrupted jobs are marked after restart;
 retry by starting a new run. Running inference cannot currently be cancelled.
 
@@ -310,10 +303,9 @@ revision for diagnostics. Static-only UI edits do not require a worker restart.
 
 ## If Analyze appears not to start
 
-Open **Analyze speakers** and inspect the readiness message. Known missing
-dependencies, tokens or incompatible profiles disable submission and explain what
-is needed. A configured token does not prove access to gated weights; download
-access is checked during model loading. Server rejections appear inside the dialog. Errors no
+Open **Configure run** and inspect the readiness message. Missing dependencies or
+Hugging Face access prevent a job from being queued. Clicking Analyze now displays
+the exact error inside that dialog, with actionable setup blockers. Errors no
 longer appear behind the dialog. Model download/inference failures after queueing
 are retained under Runs and in the run status.
 

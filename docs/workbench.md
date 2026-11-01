@@ -220,3 +220,18 @@ non-speech. This verifies the execution path, not identification accuracy. All
 native paths and validate the input shape/rate. Failed jobs now record their last
 processing stage and elapsed time. A previously failed job stays failed; users
 restart the updated server and submit a new run to retry.
+
+
+## Detecting an outdated worker
+
+State responses include a server protocol, PID, start time and the Python-source
+fingerprint recorded at startup. When the current Python files differ from that
+fingerprint, restart_required becomes true and job submission is rejected before
+queueing. The UI also treats a worker without the protocol marker as outdated,
+which protects users with a pre-upgrade process still serving freshly edited static
+assets. A persistent banner and an in-dialog error explain the restart requirement.
+
+The fingerprint excludes static assets: browser refresh is sufficient for UI-only
+changes. An already running job is not cancelled by source detection. Restarting
+is still an explicit terminal action and preserves the environment of the terminal
+used to launch it; the UI never reads or transfers the Hugging Face token.

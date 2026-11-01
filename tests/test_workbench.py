@@ -105,6 +105,21 @@ def test_setup_blockers_return_actionable_response_before_queueing(web, monkeypa
     assert server.app.store.list("job") == []
 
 
+def test_server_reports_source_revision_and_rejects_stale_jobs(web, monkeypatch):
+    server, request = web
+    status, _, body = request("GET", "/api/state")
+    info = json.loads(body)["server"]
+    assert info["protocol"] == 1 and not info["restart_required"]
+    assert len(info["source_revision"]) == 64
+    monkeypatch.setattr("speaker_id.workbench.service.source_signature", lambda: "changed")
+    _, _, body = request("GET", "/api/state")
+    assert json.loads(body)["server"]["restart_required"]
+    status, _, body = request("POST", "/api/jobs", {"kind": "identify"},
+                              {"X-Workbench-Token": server.token})
+    assert status == 400 and "outdated Python code" in json.loads(body)["error"]
+    assert server.app.store.list("job") == []
+
+
 def test_reference_labels_export_and_conflict_detection(web):
     server, request = web
     headers = {"X-Workbench-Token": server.token}

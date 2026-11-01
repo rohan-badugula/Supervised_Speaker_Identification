@@ -1,8 +1,20 @@
 """Fast preflight checks; never expose credential values to the browser."""
 import importlib.util
 import os
+import hashlib
+from pathlib import Path
 
 from ..media import require_ffmpeg
+
+
+def source_signature():
+    """Fingerprint Python source only; static UI edits do not need a restart."""
+    root = Path(__file__).resolve().parents[1]
+    signature = hashlib.sha256()
+    for path in sorted(root.rglob("*.py")):
+        signature.update(str(path.relative_to(root)).encode())
+        signature.update(path.read_bytes())
+    return signature.hexdigest()
 
 
 class RuntimeNotReady(ValueError):

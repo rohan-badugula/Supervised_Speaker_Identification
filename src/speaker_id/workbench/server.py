@@ -274,6 +274,7 @@ def main():
         parser.exit(1, f"Could not start workbench: {error}\n")
     print(f"Speaker workbench: http://127.0.0.1:{server.server_address[1]}", flush=True)
     print(f"Local workspace: {args.data_dir.resolve()}", flush=True)
+    print(f"Python source revision: {server.app.source_revision[:12]}", flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:

@@ -36,7 +36,7 @@ test('Analyze exposes setup rejection inside the open dialog', async () => {
     error: 'Analysis cannot start until local setup is complete.', code: 'setup_required',
     issues: ['Set HF_TOKEN in the server terminal, then restart.'],
   })});
-  vm.runInContext("state.media = {id:'test',role:'meeting'}; state.data = {jobs:[]};", context);
+  vm.runInContext("state.media = {id:'test',role:'meeting'}; state.data = {jobs:[],server:{protocol:1,restart_required:false}};", context);
   await vm.runInContext('runJob()', context);
   const banner = elements.get('run-error');
   assert.equal(banner.hidden, false);
@@ -87,4 +87,19 @@ test('Custom ranges can start at the playhead and previews are labeled', () => {
   vm.runInContext('showAnalysisScope({analysis_range:{start_seconds:1500,end_seconds:2100,full_recording:false}})', context);
   assert.equal(elements.get('analysis-scope').hidden, false);
   assert.match(elements.get('analysis-scope').textContent, /rest has not been analyzed/);
+});
+
+
+test('Outdated workers cannot silently receive another analysis request', async () => {
+  for (const server of [null, {protocol:1,restart_required:true}]) {
+    const {context, elements} = app();
+    elements.get('run-dialog').open = true;
+    vm.runInContext("state.media = {id:'test',role:'meeting'}; state.data = {jobs:[]};", context);
+    context.server = server;
+    vm.runInContext('state.data.server = server', context);
+    context.fetch = () => assert.fail('Outdated server must not receive a new job');
+    await vm.runInContext('runJob()', context);
+    assert.match(elements.get('run-error').textContent, /Server restart required/);
+    assert.equal(elements.get('run-error').hidden, false);
+  }
 });

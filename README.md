@@ -281,6 +281,14 @@ The command produces JSON and CSV timelines with start time, end time, detected 
 
 These are starting values, not universal truths. We will tune them using held-out clips from your actual conference room.
 
+## After changing Python code
+
+Refreshing the browser only updates the UI; the Python worker must be restarted
+to load backend fixes. The workbench now detects source changes, displays a
+restart-required banner and blocks new jobs on an outdated worker. Restart from
+the terminal where HF_TOKEN is set, then refresh. Server startup prints a source
+revision for diagnostics. Static-only UI edits do not require a worker restart.
+
 ## If Analyze appears not to start
 
 Open **Configure run** and inspect the readiness message. Missing dependencies or

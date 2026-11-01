@@ -11,6 +11,7 @@ from dataclasses import asdict
 from pathlib import Path
 from time import perf_counter
 from uuid import uuid4
+from datetime import datetime, timezone
 
 import numpy as np
 
@@ -22,7 +23,7 @@ from ..profiles import ProfileBundle, load_profiles, save_profiles
 from ..provenance import package_versions, sha256_file
 from ..reporting import build_summary, write_csv_report, write_json_report
 from .store import Store
-from .runtime import RuntimeNotReady, runtime_health, setup_issues
+from .runtime import RuntimeNotReady, runtime_health, setup_issues, source_signature
 
 
 ACTIVE = {"queued", "running"}
@@ -54,6 +55,8 @@ def validate_segments(items: object, duration: float | None = None) -> list[dict
 
 class Workbench:
     def __init__(self, root: Path, *, backend_loader=load_backend):
+        self.source_revision = source_signature()
+        self.started_at = datetime.now(timezone.utc).isoformat()
         self.store = Store(root)
         self.backend_loader = backend_loader
         self.pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="voice-workbench")
@@ -71,7 +74,10 @@ class Workbench:
     def state(self) -> dict:
         return {"media": self.store.list("media"), "collections": self.store.list("collection"),
                 "jobs": self.store.list("job"), "models": [asdict(spec) for spec in MODEL_SPECS],
-                "health": runtime_health()}
+                "health": runtime_health(),
+                "server": {"protocol": 1, "pid": os.getpid(), "started_at": self.started_at,
+                           "source_revision": self.source_revision,
+                           "restart_required": self.source_revision != source_signature()}}
 
     def media_path(self, identity: str) -> Path:
         return self.store.path(self.store.get("media", identity)["path"])
@@ -104,6 +110,9 @@ class Workbench:
 
     def submit(self, payload: dict) -> dict:
         with self.lock:
+            if self.source_revision != source_signature():
+                raise RuntimeError("The server is running outdated Python code. Restart the workbench "
+                                   "from the terminal where HF_TOKEN is set, then refresh this page.")
             if sum(job["status"] in ACTIVE for job in self.store.list("job")) >= 4:
                 raise ValueError("Four jobs are already active. Wait for one to finish.")
             kind = payload.get("kind")

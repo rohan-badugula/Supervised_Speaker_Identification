@@ -31,6 +31,7 @@
       <div class="archive-index" aria-hidden="true"><span>IN YOUR LIBRARY</span><strong id="archive-count">00</strong><span>AUDIO + VIDEO</span></div>
     </header>
     <input id="file-input" type="file" accept=".mp3,.mp4,.wav,.m4a,.flac,.aac,.ogg,.mov,.mkv,.webm" hidden>
+    <div id="server-update" class="error-banner" role="alert" hidden><span><strong>Server restart needed.</strong> The Python worker is running an older version. In the terminal where you set HF_TOKEN, stop it with Ctrl+C and run <code>.venv/bin/python tools/run_workbench.py</code>, then refresh this page. Your recordings stay saved.</span></div>
     <div id="error-banner" class="error-banner" role="alert" hidden><span id="error-text"></span><button id="dismiss-error" aria-label="Dismiss error">×</button></div>
     <div id="upload-progress" class="upload-progress" hidden><div><strong id="upload-name">Uploading</strong><span id="upload-percent"></span></div><progress id="upload-meter" max="100" value="0"></progress></div>
     <section id="library" aria-label="Recording library"></section>

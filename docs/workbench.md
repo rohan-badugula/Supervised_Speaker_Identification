@@ -10,7 +10,7 @@ marking and quality controls. Profiles are reusable and specific to a model reci
 The browser uses plain HTML/CSS/JavaScript and an HTML media element with an
 accessible custom transport. The editor exposes playback, ten-second jumps,
 scrubbing, speed and video fullscreen. Model/profile settings open in a dialog
-from Configure run. Speaker tracks sit beneath playback, alongside the review
+from Analyze speakers (or Build voice profiles for references). Speaker tracks sit beneath playback, alongside the review
 log on wide screens; narrow screens stack the panels. No external
 fonts, CDN scripts, analytics, cloud storage or frontend build tool are required.
 The Python package includes the static assets and a `voice-workbench` entry point.
@@ -93,7 +93,8 @@ format support are distinct.
 Local tests exercise uploads, content ranges including suffix ranges, HEAD,
 foreign-origin rejection, stale-label conflicts, persisted annotations, synthetic
 profile generation and reuse, backend compatibility, overlapping reports, manual
-corrections and interrupted-job recovery. The final local suite passes 45 tests. JavaScript syntax is checked with Node.
+corrections and interrupted-job recovery. The current local suite passes 75 Python
+tests and 19 frontend tests. JavaScript syntax is also checked with Node.
 JSON and CSV exports use atomic file replacement, so readers never see a partial
 individual export; the two formats are not one multi-file transaction.
 
@@ -102,9 +103,11 @@ explicit synthetic timeline fixtures. They test presentation, media seeking and
 speaker synchronization, not speech recognition quality. No synthetic data is
 inserted into the user's normal library.
 
-Real model inference on a conference recording remains unverified. FFmpeg and the
-optional ML dependencies are not installed in the inspected environment; model
-weights require Hugging Face access. Training, word transcription, Gemini
+Real model inference on a conference recording remains unverified. Community-1
+dependencies and packaged FFmpeg are installed locally, and cached Community-1
+weights completed inference and emitted progress hooks on a synthetic tone.
+ECAPA with actual weights and speaker accuracy remain unverified. Initial model
+access requires the relevant Hugging Face conditions and a configured read token. Training, word transcription, Gemini
 integration, full evaluation and public deployment remain future work.
 
 
@@ -235,3 +238,34 @@ The fingerprint excludes static assets: browser refresh is sufficient for UI-onl
 changes. An already running job is not cancelled by source detection. Restarting
 is still an explicit terminal action and preserves the environment of the terminal
 used to launch it; the UI never reads or transfers the Hugging Face token.
+
+
+## Primary workflow recovery (milestone 2)
+
+Analyze speakers is the visible entry point from a meeting. Explicit radio choices
+separate anonymous clustering from saved-profile identification. New recordings
+default to a five-minute section; the summary combines source, task, range, model
+and voices. Expert matching/count settings remain secondary. Known setup blockers
+appear on the work surface and near the sticky submit action. Local readiness
+checks dependency/token presence, not remote model authorization or accuracy.
+
+Draft settings are scoped by recording ID in browser sessionStorage, with an
+in-memory fallback. They survive refresh in that tab; closing the tab clears the
+draft. Tokens and media bytes are never put in drafts. Retry explicitly restores
+the failed run snapshot. Model changes preserve identity mode and require a
+compatible collection rather than silently falling back to anonymous analysis.
+
+Latest job state and the displayed saved report are separate. Reviewing an older
+result does not hide a new failure, and corrections target the displayed report ID
+even while another run is active. Bounded runs show decoded scope, including the
+case where a short recording fits completely inside the selected section.
+Refresh fetches current state, and returning to a visible tab requests a refresh.
+
+Developer browser checks used isolated synthetic recordings and a stub backend
+through the regular job path: keyboard submission, saved result review, controlled
+failure and retry settings were exercised. Increased-zoom inspection exposed
+space pressure; the submit action stays visible and its repeated footnote is
+omitted on short viewports. This is not a full mobile or screen-reader audit.
+Safari's native picker did not enable the temporary WAV fixture, so browser upload
+completion remains unverified in this pass; HTTP upload tests pass. A first-time
+user review and device/browser accessibility checks remain open in the roadmap.

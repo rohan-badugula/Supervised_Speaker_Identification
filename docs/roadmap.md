@@ -43,17 +43,18 @@ Model preparation may include downloads, so its duration remains unknown unless
 we add a real download counter later. Silence in progress events is not by itself
 proof that a process is hung.
 
-## Milestone 2 — Make the primary workflow intuitive
+## Milestone 2 — Make the primary workflow intuitive (implemented; user/device review pending)
 
 Scope:
 
 - [ ] Review upload → choose mode/range → run → review with a first-time user.
-- [ ] Name anonymous analysis and enrolled identification explicitly; explain the difference in the UI.
-- [ ] Surface readiness and model access before the user attempts a run.
-- [ ] Make starting an analysis a discoverable action; keep expert settings secondary.
-- [ ] Show selected recording, range, model and voice collection together before submission.
-- [ ] Preserve choices, provide actionable retry and make partial-run results unmistakable.
-- [ ] Audit hidden controls, microcopy, responsive behavior, keyboard and focus order.
+- [x] Name anonymous analysis and enrolled identification explicitly; explain the difference in the UI.
+- [x] Surface local readiness before a run; explain that gated access is checked during model loading.
+- [x] Make starting an analysis a discoverable action; keep expert settings secondary.
+- [x] Show selected recording, range, model and voice collection together before submission.
+- [x] Preserve choices, provide actionable retry and make partial-run results unmistakable.
+- [x] Inspect desktop controls, microcopy, keyboard submission and increased-zoom behavior.
+- [ ] Complete mobile/cross-browser and screen-reader checks; resolve native Safari upload-picker verification.
 
 Exit: a new user can start an anonymous preview and find the saved results without
 instructions from the developer. Record observed usability problems rather than
@@ -148,3 +149,10 @@ just a feature count or number of models.
   browser preview. Model counters, elapsed time, heartbeat and terminal outcomes
   are visible outside configuration; text sizes increased. Real-meeting usability
   review and the broader workflow audit remain in milestone 2.
+
+- 2026-11-01: Milestone 2 implementation added explicit modes, first-five-minute
+  defaults, visible setup blockers, run summary, sticky submission, tab-local drafts
+  and faithful retry. Latest run state is separated from the displayed report;
+  corrections use that report ID. Verified 75 Python and 19 frontend tests plus
+  synthetic browser submission, completion, failure and retry. First-time user
+  and full device/accessibility validation remain open.

@@ -34,15 +34,19 @@
     <div id="server-update" class="error-banner" role="alert" hidden><span><strong>Server restart needed.</strong> The Python worker is running an older version. In the terminal where you set HF_TOKEN, stop it with Ctrl+C and run <code>.venv/bin/python tools/run_workbench.py</code>, then refresh this page. Your recordings stay saved.</span></div>
     <div id="error-banner" class="error-banner" role="alert" hidden><span id="error-text"></span><button id="dismiss-error" aria-label="Dismiss error">×</button></div>
     <div id="upload-progress" class="upload-progress" hidden><div><strong id="upload-name">Uploading</strong><span id="upload-percent"></span></div><progress id="upload-meter" max="100" value="0"></progress></div>
+    <section id="readiness-banner" class="readiness-banner" aria-label="Analysis setup"><div><strong id="readiness-title">Checking local setup…</strong><p id="readiness-detail"></p></div><button id="readiness-setup" class="secondary">Review setup</button></section>
     <section id="global-activity" class="processing-panel" aria-label="Latest processing activity" hidden></section>
     <section id="library" aria-label="Recording library"></section>
     <section id="workspace" hidden>
       <div class="recording-header"><button id="back-library" class="text-button">← Session archive</button><span class="crumb-divider">/</span><span id="recording-type" class="tag">MEETING</span><span id="save-status" role="status"></span></div>
       <div class="recording-title">
         <div><h2 id="recording-name"></h2><p id="recording-meta"></p></div>
-        <div class="session-actions"><span id="session-job" class="session-job" role="status"></span><button id="refresh-results" class="secondary">↻ Refresh</button><button id="configure-run" class="primary">Configure run <span aria-hidden="true">↗</span></button></div>
+        <div class="session-actions"><span id="session-job" class="session-job" role="status"></span><button id="refresh-results" class="secondary">↻ Refresh</button><button id="configure-run" class="primary">Analyze speakers <span aria-hidden="true">↗</span></button></div>
       </div>
+      <ol id="workflow-steps" class="workflow-steps" aria-label="Recording workflow"></ol>
+      <p id="workspace-guidance" class="workspace-guidance"></p>
       <section id="processing-panel" class="processing-panel" aria-label="Processing status" hidden></section>
+      <section id="result-context" class="result-context" aria-label="Displayed result" hidden></section>
       <div class="review-grid">
         <div class="media-column">
           <section class="player-panel" aria-label="Media player">
@@ -80,7 +84,7 @@
         <section class="segments-panel" aria-label="Speaker segments">
           <div class="log-header"><div><span class="eyebrow">THE CONVERSATION, INDEXED</span><h3 id="segments-title">Speaker log <span id="segment-count" class="count">0</span></h3></div><span class="log-mark" aria-hidden="true">↗</span></div>
           <p id="segments-description">Review speaker labels alongside the original recording.</p>
-          <div class="log-tools"><select id="run-history" aria-label="Choose result run" hidden></select><div class="export-actions"><a id="export-json" hidden>JSON ↓</a><a id="export-csv" hidden>CSV ↓</a></div></div>
+          <div class="log-tools"><label id="run-history-label" hidden>Saved result<select id="run-history" aria-label="Choose result run" hidden></select></label><div class="export-actions"><a id="export-json" hidden>JSON ↓</a><a id="export-csv" hidden>CSV ↓</a></div></div>
           <div class="table-toolbar"><label class="search-label"><span aria-hidden="true">⌕</span><input id="segment-search" type="search" placeholder="Find a voice or cluster" aria-label="Filter segments"></label><span id="filter-count"></span></div>
           <span id="quality-heading" class="sr-only">MATCH</span>
           <div id="segment-rows" class="log-list" role="list"></div>
@@ -97,36 +101,33 @@
   <dialog id="run-dialog" class="run-dialog" role="dialog" aria-modal="true" aria-labelledby="run-title">
     <div class="dialog-header"><div><span class="eyebrow">PROCESSING DESK</span><h2 id="run-title">Configure this run</h2></div><button id="close-run" class="icon-button" aria-label="Close run settings">×</button></div>
     <div class="run-panel">
-      <label>Model configuration<select id="model-select"></select></label><p class="field-hint" id="model-hint"></p>
-      <div id="meeting-options">
-        <div class="analysis-range-controls">
-          <label>Analysis range<select id="analysis-duration">
-            <option value="full">Full recording</option>
-            <option value="300">First 5 minutes</option>
-            <option value="600">First 10 minutes</option>
-            <option value="900">First 15 minutes</option>
-            <option value="1800">First 30 minutes</option>
-            <option value="3600">First 1 hour</option>
-            <option value="custom">Custom section…</option>
-          </select></label>
-          <div id="custom-range" class="clip-fields" hidden>
-            <label>Start · minutes<input id="analysis-start" type="number" min="0" step="0.01" value="0"></label>
-            <label>Length · minutes<input id="analysis-length" type="number" min="0.01" step="0.01" value="10"></label>
+      <div id="runtime-note" class="runtime-note" role="status"></div><button id="runtime-setup" class="text-button">Review local setup →</button>
+      <div class="run-layout"><div class="run-choices">
+        <div id="meeting-options">
+          <fieldset class="mode-options"><legend>1. How should voices be labeled?</legend>
+            <label class="mode-choice"><input type="radio" name="analysis-mode" id="mode-anonymous" value="anonymous" checked><span><strong>Anonymous speakers</strong><small>Person 1, Person 2… No voice samples needed. Labels belong to this run.</small></span></label>
+            <label class="mode-choice"><input type="radio" name="analysis-mode" id="mode-enrolled" value="enrolled"><span><strong>Recognize saved voices</strong><small>Match against a saved collection. Unrecognized voices can remain UNKNOWN.</small></span></label>
+          </fieldset>
+          <div id="collection-options" hidden><label>Voice collection<select id="collection-select"><option value="">Choose a collection…</option></select></label><p id="collection-hint" class="field-hint"></p><button id="prepare-voices" class="text-button" type="button">Prepare reference voices →</button></div>
+          <div class="analysis-range-controls">
+            <label>2. How much should we analyze?<select id="analysis-duration">
+              <option value="300" selected>First 5 minutes · recommended first run</option><option value="600">First 10 minutes</option><option value="900">First 15 minutes</option><option value="1800">First 30 minutes</option><option value="3600">First 1 hour</option><option value="full">Full recording</option><option value="custom">Custom section…</option>
+            </select></label>
+            <div id="custom-range" class="clip-fields" hidden><label>Start · minutes<input id="analysis-start" type="number" min="0" step="0.01" value="0"></label><label>Length · minutes<input id="analysis-length" type="number" min="0.01" step="0.01" value="10"></label></div>
+            <button id="range-from-playhead" class="text-button" type="button">Use playhead as start · 10-minute section</button><p id="analysis-range-hint" class="field-hint"></p>
           </div>
-          <button id="range-from-playhead" class="text-button" type="button">Start a 10-minute preview here ↗</button>
-          <p id="analysis-range-hint" class="field-hint">Analyze the complete recording. Your original media stays unchanged.</p>
         </div>
-        <label>Saved voice collection<select id="collection-select"><option value="">Anonymous · no saved profiles</option></select></label><p class="field-hint">Choose a collection to recognize familiar voices. Anonymous labels belong to this recording only.</p><details class="advanced"><summary>Matching & speaker bounds</summary><div class="clip-fields"><label>Similarity threshold<input id="threshold" type="number" min="-1" max="1" step="0.01" value="0.55"></label><label>Match margin<input id="margin" type="number" min="0" max="2" step="0.01" value="0.08"></label></div><div class="clip-fields"><label>Minimum speakers<input id="min-speakers" type="number" min="1" max="100" placeholder="Auto"></label><label>Maximum speakers<input id="max-speakers" type="number" min="1" max="100" placeholder="Auto"></label></div><p class="field-hint">Similarity is a score, not a probability. Calibrate matching on your room's recordings.</p></details></div>
-      <div id="enrollment-options" hidden><label>Collection name<input id="collection-name" value="Team reference voices" maxlength="100"></label><p class="field-hint">A saved collection can be reused. Each model configuration needs its own profiles.</p></div>
-      <div id="runtime-note" class="runtime-note"></div><button id="runtime-setup" class="text-button">Review local setup →</button><div id="current-job" class="current-job" hidden></div>
-      <div id="run-error" class="error-banner" role="alert" tabindex="-1" hidden></div>
-      <button id="run-button" class="primary full">Analyze speakers <span aria-hidden="true">→</span></button>
-      <p class="run-footnote">One model, fixed for this run. The original media stays untouched. This produces speaker timestamps; word transcription comes later.</p>
+        <div id="enrollment-options" hidden><label>Collection name<input id="collection-name" value="Team reference voices" maxlength="100"></label><p class="field-hint">Included clean clips become reusable profiles. Save labels here or build to save and process them together.</p></div>
+        <label class="model-field">Model for this run<select id="model-select"></select></label><p class="field-hint" id="model-hint"></p>
+        <details class="advanced" id="advanced-options"><summary>Advanced · matching and speaker count</summary><div id="matching-options" class="clip-fields"><label>Similarity threshold<input id="threshold" type="number" min="-1" max="1" step="0.01" value="0.55"></label><label>Match margin<input id="margin" type="number" min="0" max="2" step="0.01" value="0.08"></label></div><div class="clip-fields"><label>Minimum speakers<input id="min-speakers" type="number" min="1" max="100" placeholder="Auto"></label><label>Maximum speakers<input id="max-speakers" type="number" min="1" max="100" placeholder="Auto"></label></div><p class="field-hint">Similarity is a score, not a probability. Calibrate with your room's recordings.</p></details>
+      </div><aside class="run-review" aria-label="Run summary"><h3>This run</h3><dl id="run-summary"></dl><p id="run-output-hint">Creates speaker timestamps. Spoken-word transcription comes later.</p></aside></div>
+      <div id="current-job" class="current-job" hidden></div>
+      <div class="run-submit"><div id="run-error" class="error-banner" role="alert" tabindex="-1" hidden></div><p id="run-blocker" role="status"></p><button id="run-button" class="primary full">Start 5-minute analysis →</button><p class="run-footnote">Runs locally on CPU. The model stays fixed for this run. Your original media stays unchanged.</p></div>
     </div>
   </dialog>
   <dialog id="setup-dialog" role="dialog" aria-modal="true" aria-labelledby="setup-title"><div class="dialog-header"><div><span class="eyebrow">ON THIS MACHINE</span><h2 id="setup-title">Local setup</h2></div><button id="close-setup" class="icon-button" aria-label="Close setup">×</button></div><p>Import, playback and reference labeling work without model downloads. Analysis needs these local dependencies.</p><div id="setup-checks"></div><h3>Install from the project folder</h3><pre>source .venv/bin/activate
 python -m pip install -e '.[audio,dev]'
-# Optional: add ECAPA with .[ecapa,dev]</pre><p>The audio extra includes a packaged FFmpeg fallback when no system installation is available.</p><h3>Enable initial model access</h3><p>Accept the Community-1 conditions on Hugging Face, create a read token, set <code>HF_TOKEN</code> in the server terminal, and restart the workbench. No token is entered or stored here.</p><a href="https://huggingface.co/pyannote/speaker-diarization-community-1" target="_blank" rel="noreferrer">Community-1 model page ↗</a><p class="field-hint">Analysis currently runs on CPU. Browser playback depends on the file codec; MP4/H.264 and common MP3 files are good starting formats.</p></dialog>
+# Optional: add ECAPA with .[ecapa,dev]</pre><p>The audio extra includes a packaged FFmpeg fallback when no system installation is available.</p><h3>Enable initial model access</h3><p>Accept the Community-1 conditions on Hugging Face, create a read token, set <code>HF_TOKEN</code> in the server terminal, and restart the workbench. No token is entered or stored here. A configured token does not verify model access; Hugging Face can still reject the first download.</p><a href="https://huggingface.co/pyannote/speaker-diarization-community-1" target="_blank" rel="noreferrer">Community-1 model page ↗</a><p class="field-hint">Analysis currently runs on CPU. Browser playback depends on the file codec; MP4/H.264 and common MP3 files are good starting formats.</p></dialog>
   <div id="toast" class="toast" role="status" hidden></div>
 </body>
 </html>

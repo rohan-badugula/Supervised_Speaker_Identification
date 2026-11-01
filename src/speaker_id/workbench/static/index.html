@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light"><title>Speaker Workbench</title>
+  <link rel="stylesheet" href="/styles.css"><script src="/app.js" defer></script>
+</head>
+<body>
+  <aside class="sidebar">
+    <a href="#meetings" class="brand"><span class="brand-mark" aria-hidden="true">≋</span><span>Speaker<span class="brand-sub">WORKBENCH</span></span></a>
+    <div class="workspace-label">LOCAL WORKSPACE</div>
+    <nav aria-label="Main navigation">
+      <button data-view="meetings" class="nav-button active"><span aria-hidden="true">▤</span> Meetings <span id="meeting-count" class="count">0</span></button>
+      <button data-view="references" class="nav-button"><span aria-hidden="true">◉</span> Reference voices <span id="reference-count" class="count">0</span></button>
+      <button data-view="profiles" class="nav-button"><span aria-hidden="true">▦</span> Saved profiles</button>
+      <button data-view="jobs" class="nav-button"><span aria-hidden="true">↻</span> Processing <span id="job-count" class="count">0</span></button>
+    </nav>
+    <div class="sidebar-bottom">
+      <button id="setup-button" class="nav-button"><span aria-hidden="true">⚙</span> Local setup <span id="setup-dot" class="status-dot"></span></button>
+      <div class="local-note"><span class="status-dot ready"></span> Files stay on this computer<span>No account or cloud upload</span></div>
+    </div>
+  </aside>
+  <main>
+    <header class="page-header"><div><div class="eyebrow">AUDIO / VIDEO · SPEAKER IDENTIFICATION</div><h1 id="page-title">Meetings</h1><p id="page-description">A recording, a timeline, and a clearer picture of who spoke.</p></div><button id="upload-button" class="primary"><span aria-hidden="true">＋</span> Upload recording</button></header>
+    <input id="file-input" type="file" accept=".mp3,.mp4,.wav,.m4a,.flac,.aac,.ogg,.mov,.mkv,.webm" hidden>
+    <div id="error-banner" class="error-banner" role="alert" hidden><span id="error-text"></span><button id="dismiss-error" aria-label="Dismiss error">×</button></div>
+    <div id="upload-progress" class="upload-progress" hidden><div><strong id="upload-name">Uploading</strong><span id="upload-percent"></span></div><progress id="upload-meter" max="100" value="0"></progress></div>
+    <section id="library" aria-label="Recording library"></section>
+    <section id="workspace" hidden>
+      <div class="recording-header"><button id="back-library" class="text-button">← All recordings</button><span id="recording-type" class="tag">MEETING</span><span id="save-status" role="status"></span></div>
+      <div class="recording-title"><div><h2 id="recording-name"></h2><p id="recording-meta"></p></div><button id="refresh-results" class="secondary">Refresh results</button></div>
+      <div class="workbench-grid">
+        <section class="player-panel" aria-label="Media player">
+          <div class="player-stage"><video id="player" controls preload="metadata" playsinline></video><div id="active-speakers" class="speaker-overlay" aria-live="off"></div></div>
+          <div class="playback-footer"><span id="playback-time" class="mono">00:00 / --:--</span><span>Space to play · I / O to mark a clip</span><label>Speed <select id="playback-speed"><option value="0.75">0.75×</option><option value="1" selected>1×</option><option value="1.25">1.25×</option><option value="1.5">1.5×</option><option value="2">2×</option></select></label></div>
+          <div id="reference-editor" hidden>
+            <div class="panel-heading"><div><h3>Mark a reference clip</h3><p>Use clean speech from one person at a time.</p></div><span class="tag">ENROLLMENT</span></div>
+            <form id="clip-form"><div class="clip-times"><label>Start (seconds)<div class="input-action"><input id="clip-start" type="number" min="0" step="0.001" required placeholder="0.000"><button id="mark-in" type="button" title="Mark current time (I)">Set I</button></div></label><label>End (seconds)<div class="input-action"><input id="clip-end" type="number" min="0" step="0.001" required placeholder="0.000"><button id="mark-out" type="button" title="Mark current time (O)">Set O</button></div></label></div><div class="clip-fields"><label>Speaker label<input id="clip-speaker" list="speaker-suggestions" value="Person 1" maxlength="80" required><datalist id="speaker-suggestions"></datalist></label><label>Quality<select id="clip-quality"><option value="clean">Clean speech</option><option value="overlap">Overlapping speech</option><option value="noise">Noise</option><option value="uncertain">Uncertain</option></select></label></div><div class="form-actions"><button type="submit" class="secondary">＋ Add clip</button><span>Labels are saved when you choose Save labels.</span></div></form>
+          </div>
+        </section>
+        <aside class="run-panel">
+          <div class="panel-heading"><h3 id="run-title">Analyze recording</h3><span class="tag">LOCAL</span></div>
+          <label>Model configuration<select id="model-select"></select></label><p class="field-hint" id="model-hint"></p>
+          <div id="meeting-options"><label>Voice profiles<select id="collection-select"><option value="">Anonymous · no saved profiles</option></select></label><p class="field-hint">Anonymous labels apply to this recording only. Choose saved profiles to recognize the same people across meetings.</p><details class="advanced"><summary>Matching & speaker bounds</summary><div class="clip-fields"><label>Similarity<input id="threshold" type="number" min="-1" max="1" step="0.01" value="0.55"></label><label>Match margin<input id="margin" type="number" min="0" max="2" step="0.01" value="0.08"></label></div><div class="clip-fields"><label>Minimum speakers<input id="min-speakers" type="number" min="1" max="100" placeholder="Auto"></label><label>Maximum speakers<input id="max-speakers" type="number" min="1" max="100" placeholder="Auto"></label></div><p class="field-hint">Similarity is a model score, not a probability. Defaults need calibration for your room.</p></details></div>
+          <div id="enrollment-options" hidden><label>Collection name<input id="collection-name" value="Team reference voices" maxlength="100"></label><p class="field-hint">Build once, then reuse. Each model configuration needs its own collection.</p></div>
+          <button id="run-button" class="primary full">Analyze speakers <span aria-hidden="true">→</span></button>
+          <div id="runtime-note" class="runtime-note"></div>
+          <div id="current-job" class="current-job" hidden></div>
+          <div class="run-footnote">The original media is retained for playback. Models process extracted audio. Spoken-word transcription is a later step.</div>
+        </aside>
+      </div>
+      <section class="timeline-panel" aria-label="Speaker timeline"><div class="panel-heading"><div><h3>Speaker activity</h3><p id="timeline-description">Click a segment to jump to that moment.</p></div><label class="zoom-label">Zoom <input id="timeline-zoom" type="range" min="1" max="16" value="1" step="1" aria-label="Timeline zoom"></label></div><div id="timeline-scroll" class="timeline-scroll"><div id="timeline" class="timeline"></div></div><div id="speaker-summary" class="speaker-summary"></div></section>
+      <section class="segments-panel" aria-label="Speaker segments"><div class="panel-heading"><div><h3 id="segments-title">Speaker segments <span id="segment-count" class="count">0</span></h3><p id="segments-description">Review speaker labels alongside the original recording.</p></div><div class="segment-actions"><select id="run-history" aria-label="Choose result run" hidden></select><button id="save-labels" class="primary" hidden>Save labels</button><button id="save-corrections" class="primary" hidden>Save corrections</button><a id="export-json" class="secondary" hidden>JSON ↓</a><a id="export-csv" class="secondary" hidden>CSV ↓</a></div></div><div class="table-toolbar"><label class="search-label"><span aria-hidden="true">⌕</span><input id="segment-search" type="search" placeholder="Filter by speaker or cluster…" aria-label="Filter segments"></label><span id="filter-count"></span></div><div class="table-scroll"><table><thead><tr><th>TIME</th><th>SPEAKER</th><th id="quality-heading">MATCH</th><th>DURATION</th><th>REVIEW</th></tr></thead><tbody id="segment-rows"></tbody></table></div><button id="more-segments" class="text-button" hidden>Show more segments</button><div id="segments-empty" class="empty-inline">Your speaker timeline will appear here after analysis.</div></section>
+    </section>
+    <section id="profiles-page" hidden></section>
+    <section id="jobs-page" hidden></section>
+    <footer class="page-footer"><span>Speaker Workbench <span class="muted">/ Local development</span></span><span id="connection-state" role="status">Connecting…</span></footer>
+  </main>
+  <dialog id="setup-dialog"><div class="dialog-header"><h2>Local setup</h2><button id="close-setup" class="text-button" aria-label="Close setup">×</button></div><p>Playback, uploads, and reference labeling work without model downloads. Processing needs these local dependencies.</p><div id="setup-checks"></div><h3>Install from the project folder</h3><pre>source .venv/bin/activate
+python -m pip install -e '.[ecapa,dev]'
+brew install ffmpeg</pre><h3>Enable initial model access</h3><p>Accept the Community-1 conditions on Hugging Face, set <code>HF_TOKEN</code> in the server terminal, and restart the workbench. No token is entered or stored in this UI.</p><a href="https://huggingface.co/pyannote/speaker-diarization-community-1" target="_blank" rel="noreferrer">Open Community-1 model page ↗</a><p class="field-hint">The workbench currently processes on CPU. Browser playback depends on your file's codec; MP4/H.264 and common MP3 files are the safest starting formats.</p></dialog>
+  <div id="toast" class="toast" role="status" hidden></div>
+</body>
+</html>

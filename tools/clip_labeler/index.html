@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VoiceSet Labeler</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header>
+      <div class="brand">VOICESET <span>/</span> LABELER</div>
+      <div class="save-state" id="save-state"><i></i><span>LOADING PROJECT</span></div>
+    </header>
+
+    <main>
+      <section class="workspace">
+        <div class="title-row">
+          <div>
+            <p class="eyebrow">SOURCE RECORDING</p>
+            <h1 id="source-name">Loading…</h1>
+          </div>
+          <div class="project-actions">
+            <button class="secondary" id="save-button" type="button">SAVE LABELS</button>
+            <button class="primary" id="export-button" type="button">EXPORT CLEAN CLIPS</button>
+          </div>
+        </div>
+
+        <div class="player-card">
+          <audio id="audio" controls preload="metadata" src="/api/audio"></audio>
+          <div class="timeline" id="timeline">
+            <div class="timeline-progress" id="timeline-progress"></div>
+            <div class="timeline-segments" id="timeline-segments"></div>
+          </div>
+          <div class="transport">
+            <div class="timecode"><strong id="current-time">00:00.000</strong><span>/</span><span id="duration">00:00.000</span></div>
+            <div class="seek-actions">
+              <button data-seek="-5" type="button">−5 SEC</button>
+              <button data-seek="-1" type="button">−1 SEC</button>
+              <button data-seek="1" type="button">+1 SEC</button>
+              <button data-seek="5" type="button">+5 SEC</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="marking-grid">
+          <div class="mark-card in-card">
+            <span>IN POINT</span><strong id="in-value">—</strong>
+            <button id="mark-in" type="button">MARK IN <kbd>I</kbd></button>
+          </div>
+          <div class="mark-card out-card">
+            <span>OUT POINT</span><strong id="out-value">—</strong>
+            <button id="mark-out" type="button">MARK OUT <kbd>O</kbd></button>
+          </div>
+          <form class="label-form" id="label-form">
+            <label>
+              <span>SPEAKER NAME OR SEAT</span>
+              <input id="speaker-input" list="speaker-list" placeholder="e.g. Alice or Seat 03" autocomplete="off" required />
+              <datalist id="speaker-list"></datalist>
+            </label>
+            <label>
+              <span>QUALITY FLAG</span>
+              <select id="flag-input">
+                <option value="clean">Clean, single speaker</option>
+                <option value="overlap">Overlapping speech</option>
+                <option value="noise">Background noise</option>
+                <option value="uncertain">Speaker uncertain</option>
+              </select>
+            </label>
+            <label class="notes-field">
+              <span>NOTES</span>
+              <input id="notes-input" placeholder="Optional context" />
+            </label>
+            <button class="add-button" type="submit">ADD SEGMENT <kbd>ENTER</kbd></button>
+          </form>
+        </div>
+
+        <div class="guidance">
+          <span>ENROLLMENT GUIDANCE</span>
+          <p>Aim for 3–6 clean clips per person, each 5–15 seconds. Exclude interruptions, laughter over speech, music, and overlapping voices.</p>
+        </div>
+      </section>
+
+      <aside class="segments-panel">
+        <div class="panel-heading">
+          <div><p class="eyebrow">LABELED DATA</p><h2>Segments</h2></div>
+          <span id="segment-count">0</span>
+        </div>
+        <div class="speaker-summary" id="speaker-summary"></div>
+        <div class="segment-list" id="segment-list">
+          <div class="empty-state"><span>NO SEGMENTS YET</span><p>Play the recording and mark a clean speaker region.</p></div>
+        </div>
+      </aside>
+    </main>
+
+    <div class="toast" id="toast" role="alert"></div>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

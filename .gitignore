@@ -1,0 +1,26 @@
+.venv/
+__pycache__/
+.pytest_cache/
+*.py[cod]
+.DS_Store
+
+# Personal living learning notebook; keep out of the public project.
+/docs/LEARNING_GUIDE.local.md
+
+# Local workbench: recordings, labels, job database, profiles, and reports.
+/data/workbench/
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm
+
+# Voiceprints and recordings are biometric/private data.
+data/enrollment/**
+data/input/**
+data/annotations/**
+artifacts/**
+results/**
+!data/enrollment/.gitkeep
+!data/input/.gitkeep
+!data/annotations/.gitkeep
+!artifacts/.gitkeep
+!results/.gitkeep

@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=75", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "supervised-speaker-id"
+version = "0.1.0"
+description = "Local supervised speaker diarization and identification for recorded audio and video."
+readme = "README.md"
+requires-python = ">=3.11,<3.14"
+dependencies = [
+  "numpy>=2.0,<3",
+]
+
+[project.optional-dependencies]
+audio = ["pyannote.audio>=4.0,<5", "soundfile>=0.12,<1"]
+ecapa = ["pyannote.audio>=4.0,<5", "soundfile>=0.12,<1", "speechbrain>=1.0,<2"]
+dev = ["pytest>=8,<10"]
+
+[project.scripts]
+voice-id = "speaker_id.cli:main"
+voice-workbench = "speaker_id.workbench.server:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"speaker_id.workbench" = ["static/*.html", "static/*.css", "static/*.js"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src", "."]
+addopts = "-q"

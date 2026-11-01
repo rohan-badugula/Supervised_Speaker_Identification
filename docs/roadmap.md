@@ -60,24 +60,15 @@ Exit: a new user can start an anonymous preview and find the saved results witho
 instructions from the developer. Record observed usability problems rather than
 assuming the revised wireframe solves them.
 
-## Final visual-design pass — Give the workbench its own identity (current)
+## Visual exploration — Closed; retain the current UI
 
-Requested after the primary workflow changes: the interface still feels generic.
-Complete one bounded visual pass, preserve the usability fixes, then return to
-review/correction, evaluation data, benchmarking and model/pipeline work.
+- [x] Explore three visual directions using the existing product as context.
+- [x] Record the owner's decision: keep the current interface; none of the concepts will be implemented.
 
-- [ ] Explore three distinct visual directions using the existing product as context; choose one before implementation.
-- [ ] Build a coherent visual identity across the recording editor, library and run settings.
-- [ ] Let actual speaker tracks, timestamps, overlap and playback carry the visual interest.
-- [ ] Keep body text readable, primary actions discoverable and progress visible.
-- [ ] Use restrained purposeful motion, with reduced-motion support; no decorative motion that suggests analysis is progressing.
-- [ ] Design empty, loading, running, failed and completed states as part of the same system.
-- [ ] Verify responsive layouts, keyboard use and the existing workflow regressions.
-- [ ] Record decisions in the ignored learning guide and make meaningful local commits.
-
-Exit: one selected direction implemented and reviewed. This pass does not introduce
-new model features or restart an open-ended visual redesign. Existing first-user,
-browser-upload and accessibility verification gaps remain visible above.
+The additional redesign is cancelled. Preserve the implemented progress, readiness,
+mode selection, preview and retry improvements. Resume the ordered functional
+roadmap below. First-user, browser-upload and accessibility verification gaps from
+milestone 2 remain open; closing this exploration does not mark those checks done.
 
 ## Milestone 3 — Make review and correction useful
 
@@ -179,3 +170,6 @@ just a feature count or number of models.
 - 2026-11-01: Added the requested final visual-design pass before returning focus
   to evaluation and the core speaker-analysis pipeline. Explore three directions
   first; keep progress, readiness and usability fixes intact.
+
+- 2026-11-01: Owner preferred the current UI over all three concepts. Closed
+  visual exploration and cancelled the proposed redesign; resume functional work.

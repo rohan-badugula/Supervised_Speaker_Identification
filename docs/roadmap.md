@@ -60,6 +60,25 @@ Exit: a new user can start an anonymous preview and find the saved results witho
 instructions from the developer. Record observed usability problems rather than
 assuming the revised wireframe solves them.
 
+## Final visual-design pass — Give the workbench its own identity (current)
+
+Requested after the primary workflow changes: the interface still feels generic.
+Complete one bounded visual pass, preserve the usability fixes, then return to
+review/correction, evaluation data, benchmarking and model/pipeline work.
+
+- [ ] Explore three distinct visual directions using the existing product as context; choose one before implementation.
+- [ ] Build a coherent visual identity across the recording editor, library and run settings.
+- [ ] Let actual speaker tracks, timestamps, overlap and playback carry the visual interest.
+- [ ] Keep body text readable, primary actions discoverable and progress visible.
+- [ ] Use restrained purposeful motion, with reduced-motion support; no decorative motion that suggests analysis is progressing.
+- [ ] Design empty, loading, running, failed and completed states as part of the same system.
+- [ ] Verify responsive layouts, keyboard use and the existing workflow regressions.
+- [ ] Record decisions in the ignored learning guide and make meaningful local commits.
+
+Exit: one selected direction implemented and reviewed. This pass does not introduce
+new model features or restart an open-ended visual redesign. Existing first-user,
+browser-upload and accessibility verification gaps remain visible above.
+
 ## Milestone 3 — Make review and correction useful
 
 - [ ] Keep active turns and playhead synchronized without losing editing focus.
@@ -156,3 +175,7 @@ just a feature count or number of models.
   corrections use that report ID. Verified 75 Python and 19 frontend tests plus
   synthetic browser submission, completion, failure and retry. First-time user
   and full device/accessibility validation remain open.
+
+- 2026-11-01: Added the requested final visual-design pass before returning focus
+  to evaluation and the core speaker-analysis pipeline. Explore three directions
+  first; keep progress, readiness and usability fixes intact.

@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=75", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "speaker-workbench-frontend"
+version = "0.1.0"
+description = "Local speaker workbench frontend and streaming API gateway"
+requires-python = ">=3.11,<3.14"
+readme = "README.md"
+dependencies = []
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["speaker_frontend*"]
+
+[tool.setuptools.package-data]
+speaker_frontend = ["static/*.html", "static/*.css", "static/*.js"]

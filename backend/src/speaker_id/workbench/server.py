@@ -19,7 +19,9 @@ from .service import Workbench
 from .runtime import RuntimeNotReady
 from .lifecycle import release_workbench_port
 
-STATIC = Path(__file__).parent / "static"
+from importlib.resources import files
+
+STATIC = Path(str(files("speaker_frontend") / "static"))
 MAX_UPLOAD = 4 * 1024 ** 3
 MAX_JSON = 5 * 1024 ** 2
 

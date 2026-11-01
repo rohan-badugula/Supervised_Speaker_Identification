@@ -3,7 +3,9 @@
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+PROJECT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(PROJECT / "backend" / "src"))
+sys.path.insert(0, str(PROJECT / "frontend"))
 
 from speaker_id.workbench.server import main
 

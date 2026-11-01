@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
-const root = path.join(__dirname, '../src/speaker_id/workbench/static');
+const root = path.join(__dirname, '../speaker_frontend/static');
 
 function app() {
   const elements = new Map();

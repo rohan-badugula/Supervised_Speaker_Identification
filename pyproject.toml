@@ -22,12 +22,13 @@ voice-id = "speaker_id.cli:main"
 voice-workbench = "speaker_id.workbench.server:main"
 
 [tool.setuptools.packages.find]
-where = ["src"]
+where = ["backend/src", "frontend"]
+include = ["speaker_id*", "speaker_frontend*"]
 
 [tool.setuptools.package-data]
-"speaker_id.workbench" = ["static/*.html", "static/*.css", "static/*.js"]
+"speaker_frontend" = ["static/*.html", "static/*.css", "static/*.js"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["src", "."]
+pythonpath = ["backend/src", "frontend", "."]
 addopts = "-q"

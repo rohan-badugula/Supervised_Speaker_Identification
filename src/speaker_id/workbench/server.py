@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import argparse
+import errno
 import json
 import math
 import mimetypes
 import re
 import secrets
 import socket
+import subprocess
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
@@ -14,6 +16,7 @@ from uuid import uuid4
 
 from ..media import SUPPORTED_MEDIA
 from .service import Workbench
+from .lifecycle import release_workbench_port
 
 STATIC = Path(__file__).parent / "static"
 MAX_UPLOAD = 4 * 1024 ** 3
@@ -43,13 +46,18 @@ class Server(ThreadingHTTPServer):
     daemon_threads = True
 
     def __init__(self, address, root: Path, **kwargs):
-        self.app = Workbench(root, **kwargs)
         self.token = secrets.token_urlsafe(32)
         super().__init__(address, Handler)
+        try:
+            self.app = Workbench(root, **kwargs)
+        except Exception:
+            super().server_close()
+            raise
 
     def server_close(self):
         super().server_close()
-        self.app.close()
+        if hasattr(self, "app"):
+            self.app.close()
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -246,8 +254,20 @@ def main():
     parser = argparse.ArgumentParser(description="Local speaker-identification media workbench")
     parser.add_argument("--port", type=int, default=8766)
     parser.add_argument("--data-dir", type=Path, default=Path("data/workbench"))
+    parser.add_argument("--no-restart", action="store_true", help="Do not replace an existing workbench on this port")
     args = parser.parse_args()
-    server = Server(("127.0.0.1", args.port), args.data_dir)
+    if not 0 <= args.port <= 65535:
+        parser.error("Port must be between 0 and 65535.")
+    try:
+        try:
+            server = Server(("127.0.0.1", args.port), args.data_dir)
+        except OSError as error:
+            if error.errno != errno.EADDRINUSE or args.no_restart:
+                raise
+            release_workbench_port(args.port)
+            server = Server(("127.0.0.1", args.port), args.data_dir)
+    except (OSError, RuntimeError, subprocess.SubprocessError) as error:
+        parser.exit(1, f"Could not start workbench: {error}\n")
     print(f"Speaker workbench: http://127.0.0.1:{server.server_address[1]}", flush=True)
     print(f"Local workspace: {args.data_dir.resolve()}", flush=True)
     try:

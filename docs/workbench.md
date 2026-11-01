@@ -129,3 +129,21 @@ Chrome's native preview surface failed to render during this check; no Chrome
 visual verification is claimed for the redesign. The existing 45 backend and HTTP
 tests passed, JavaScript syntax passed Node checking, and static element bindings
 were checked. These checks do not replace evaluation on real model outputs.
+
+
+## Port reuse
+
+The launcher first tries to bind its requested port. If it is occupied, it uses
+lsof and ps to identify listeners and recognizes only this project's launcher,
+the speaker_id.workbench.server module, or the installed voice-workbench entry
+point. It rechecks process identity before each signal, sends SIGTERM, waits up
+to three seconds, and escalates to SIGKILL only for the same recognized process.
+An unrelated or unidentifiable listener is not terminated. `--no-restart` disables
+this behavior; `--port` can select a different port. This implementation targets
+macOS/Linux with lsof available.
+
+The server binds before opening the workspace catalog, so an unsuccessful launch
+cannot mark another running instance's jobs interrupted. The replacement instance
+performs normal restart recovery after the old process has exited. Restart aborts
+active processing; it does not resume model inference. Live tests launch two
+isolated subprocesses on a temporary port to verify replacement and the opt-out.

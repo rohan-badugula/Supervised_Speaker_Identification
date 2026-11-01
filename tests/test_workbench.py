@@ -79,6 +79,14 @@ def test_app_and_assets_are_served_without_external_dependencies(web):
         assert "frame-ancestors 'none'" in headers["Content-Security-Policy"]
 
 
+def test_port_conflict_does_not_interrupt_existing_catalog_jobs(web):
+    server, _ = web
+    job = server.app.store.save("job", {"status": "running", "stage": "Test fixture"})
+    with pytest.raises(OSError):
+        Server(server.server_address, server.app.store.root)
+    assert server.app.store.get("job", job["id"])["status"] == "running"
+
+
 def test_reference_labels_export_and_conflict_detection(web):
     server, request = web
     headers = {"X-Workbench-Token": server.token}

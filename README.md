@@ -30,6 +30,11 @@ From this project folder, start the UI with the existing virtual environment:
 
 Open **http://127.0.0.1:8766**. After installing the package, `voice-workbench`
 starts the same app. Stop it with Ctrl+C. `--port` and `--data-dir` are available.
+Running the same command again automatically replaces an existing workbench on
+that port (macOS/Linux, using `lsof`). It checks the listener's process entry point
+before sending termination signals; unrelated applications are left running.
+Use `--no-restart` to disable replacement or `--port 8767` to use another port.
+Restarting stops active work; unfinished jobs are marked interrupted on startup.
 
 1. Open **Reference room** and upload a separate reference MP3/MP4.
 2. Mark clean in/out points with the buttons or I/O shortcuts, assign dummy labels

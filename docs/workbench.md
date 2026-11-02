@@ -112,7 +112,7 @@ Local tests exercise uploads, content ranges including suffix ranges, HEAD,
 foreign-origin rejection, stale-label conflicts, persisted annotations, synthetic
 profile generation and reuse, backend compatibility, overlapping reports, manual
 corrections and interrupted-job recovery. After service separation, the suite passes 86 Python
-tests and seven frontend tests. JavaScript syntax is also checked with Node.
+tests and 19 frontend tests. JavaScript syntax is also checked with Node.
 JSON and CSV exports use atomic file replacement, so readers never see a partial
 individual export; the two formats are not one multi-file transaction.
 
@@ -289,3 +289,31 @@ omitted on short viewports. This is not a full mobile or screen-reader audit.
 Safari's native picker did not enable the temporary WAV fixture, so browser upload
 completion remains unverified in this pass; HTTP upload tests pass. A first-time
 user review and device/browser accessibility checks remain open in the roadmap.
+
+
+## Player, tracker and short-turn review (2026-11-02)
+
+The compact tracker is visible above the player, outside configuration. It shows
+backend phases and real within-stage counters; verbose details use persisted
+bounded events and distinguish heartbeat from model advancement. Disclosure state
+is preserved while polling. Heartbeat-only API updates no longer rebuild library
+controls. This is batch-job observability, not streaming speaker results.
+
+Player controls now include precise seconds-based seeking, volume/mute, speed and
+keyboard shortcuts. Fullscreen targets the player shell, removes the old 360px
+video height cap in fullscreen, and supports standard, legacy WebKit and native
+video APIs. Native entry is confirmed from browser state/events rather than an
+optimistic flag; silent refusal provides an actionable fallback. Native-video mode
+can use the browser's controls and may omit HTML speaker overlays.
+
+The review sidebar defaults to turns at least one second long. Hidden count and a
+reveal checkbox make the filter explicit. Original indices are retained for edits,
+manual reference clips stay visible, and reports/timeline/matching are unchanged.
+
+Native Safari was checked with generated H.264/AAC video and synthetic speaker
+results: playback advanced, the player entered actual fullscreen with controls and
+speaker overlay, fullscreen exit returned to the workspace, verbose details
+expanded, and the sidebar changed from four to seven turns when short turns were
+revealed. Tests cover standard/WebKit/native fullscreen paths, rejected requests,
+volume recovery, precise seeking, measured/indeterminate progress and source-index
+preservation. Other browser/device combinations still need manual coverage.

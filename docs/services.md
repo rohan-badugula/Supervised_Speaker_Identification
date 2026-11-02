@@ -140,7 +140,7 @@ workload needs rather than adding infrastructure only for its name.
 
 ## Verification
 
-86 Python tests and seven frontend tests pass locally. New integration coverage
+86 Python tests and 19 frontend tests pass locally. New integration coverage
 includes multi-block uploads, byte ranges and HEAD through the gateway, origin/
 token checks, frontend availability without the API, three distinct service PIDs,
 worker exit without taking down the frontend/API, child cleanup on replacement,

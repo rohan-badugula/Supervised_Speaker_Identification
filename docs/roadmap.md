@@ -86,13 +86,13 @@ microservice readiness or speaker accuracy.
 
 ## Current playback and progress fixes
 
-- [ ] Show a compact tracker outside run settings, using real backend phases and native counters.
-- [ ] Offer verbose stage history, elapsed time and separate worker/model heartbeat information; no invented overall ETA.
-- [ ] Improve playback controls, seeking, volume and keyboard use without redesigning the restored interface.
-- [ ] Fix fullscreen sizing and standard/WebKit/native-video fullscreen entry and exit.
-- [ ] Hide detected turns shorter than one second in the review sidebar by default, with visible hidden count and optional inspection.
-- [ ] Preserve all turns in timelines, matching, corrections, saved profiles and JSON/CSV exports; do not hide manual reference clips.
-- [ ] Verify player paths, filtering and progress rendering; commit each meaningful step.
+- [x] Show a compact tracker outside run settings, using real backend phases and native counters.
+- [x] Offer verbose stage history, elapsed time and separate worker/model heartbeat information; no invented overall ETA.
+- [x] Improve playback controls, seeking, volume and keyboard use without redesigning the restored interface.
+- [x] Fix fullscreen sizing and standard/WebKit/native-video fullscreen entry and exit.
+- [x] Hide detected turns shorter than one second in the review sidebar by default, with visible hidden count and optional inspection.
+- [x] Preserve all turns in timelines, matching, corrections, saved profiles and JSON/CSV exports; do not hide manual reference clips.
+- [x] Verify player paths, filtering and progress rendering; commit each meaningful step.
 
 ## Future progressive and streaming diarization
 
@@ -232,3 +232,9 @@ just a feature count or number of models.
 - 2026-11-01: Added requested stage tracking/verbose details, player/fullscreen fixes
   and a sub-one-second sidebar filter. Added progressive/streaming diarization as
   future work, with final-file generation remaining authoritative.
+
+- 2026-11-02: Completed compact real-stage tracking, verbose history/heartbeat
+  details, player controls/fullscreen compatibility and sub-second sidebar hiding.
+  Verified 86 Python and 19 frontend tests plus native Safari playback, actual
+  fullscreen entry/playback/exit, verbose expansion and short-turn reveal using
+  synthetic video. Progressive/streaming analysis remains planned, not implemented.

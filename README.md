@@ -54,9 +54,21 @@ is never silently retried.
 
 The session editor keeps the playback canvas and speaker tracks together on the
 left, with an editable speaker log on the right. A dedicated transport provides
-play/pause, ten-second jumps, scrubbing, speed and video fullscreen. Run settings
+play/pause, ten-second jumps, precise seeking, volume/mute, speed and video fullscreen.
+Fullscreen uses standard or WebKit container support, with native-video fallback.
+Keyboard shortcuts include Space/K (play/pause), J/L (±10 seconds), M (mute) and
+F (fullscreen); label inputs keep normal typing behavior. Run settings
 open in a separate dialog. The archive, reference room, voice bank and run history
 are available from the top navigation; smaller screens stack the editor panels.
+
+Detected turns shorter than one second are hidden from the review sidebar by
+default. **Show turns under 1 second** reveals them. This is a display filter:
+the timeline, speaker matching and JSON/CSV exports retain every turn. Manual
+reference clips are never hidden by this filter.
+
+[How diarization works and the future streaming plan](docs/diarization.md) explains
+the stages. Progressive/live analysis is planned; the current pipeline still saves
+its authoritative timestamp files after the run finishes.
 
 For a quick test of a long meeting, open **Configure run → Analysis range**.
 Choose Full recording, the first 5/10/15/30 minutes, the first hour, or a custom
@@ -73,8 +85,11 @@ with Full recording for an unlimited run; a zero-length section is rejected.
 Anonymous Person 1/2 labels can change between preview sections or runs; use saved
 voice profiles when comparing identities across them.
 
-Upload progress reports transferred bytes. Background jobs show processing stages,
-not an estimated inference percentage. One CPU worker processes jobs in order,
+Upload progress reports transferred bytes. A compact tracker above the player
+shows the current processing stage and measured chunk/batch progress when available.
+Percentages apply only to that stage. Expand **What is happening internally?** for
+stage explanations, event history and separate heartbeat/progress timestamps.
+Unmeasured stages stay indeterminate; no overall ETA is invented. One CPU worker processes jobs in order,
 with at most four active/queued jobs. The API queues jobs durably; a separate
 worker claims them. Interrupted jobs are marked after worker restart;
 retry by starting a new run. Running inference cannot currently be cancelled.

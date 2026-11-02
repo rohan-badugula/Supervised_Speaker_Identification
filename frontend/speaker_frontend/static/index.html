@@ -80,6 +80,8 @@
           <p id="segments-description">Review speaker labels alongside the original recording.</p>
           <div class="log-tools"><select id="run-history" aria-label="Choose result run" hidden></select><div class="export-actions"><a id="export-json" hidden>JSON ↓</a><a id="export-csv" hidden>CSV ↓</a></div></div>
           <div class="table-toolbar"><label class="search-label"><span aria-hidden="true">⌕</span><input id="segment-search" type="search" placeholder="Find a voice or cluster" aria-label="Filter segments"></label><span id="filter-count"></span></div>
+          <label id="short-turn-filter" class="short-turn-filter"><input id="show-short-turns" type="checkbox"> Show turns under 1 second</label>
+          <p id="short-turn-note" class="short-turn-note" role="status" hidden></p>
           <span id="quality-heading" class="sr-only">MATCH</span>
           <div id="segment-rows" class="log-list" role="list"></div>
           <div id="segments-empty" class="empty-inline">Run an analysis to index the voices in this recording.</div>

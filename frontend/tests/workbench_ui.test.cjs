@@ -112,3 +112,12 @@ test('Corrections still target the displayed report after restoring the earlier 
   await elements.get('save-corrections').onclick();
   assert.equal(endpoint,'/api/report/displayed');
 });
+
+test('Sidebar hides sub-second detections without changing source indices or output', () => {
+  const {context}=app();
+  vm.runInContext("var turns=[{start:0,end:.4},{start:2.1,end:3.1},{start:4,end:4.999},{start:5,end:7}];",context);
+  assert.equal(vm.runInContext('JSON.stringify(sidebarTurns(turns).map(row=>row.index))',context),'[1,3]');
+  assert.equal(vm.runInContext('turns.length',context),4);
+  assert.equal(vm.runInContext('sidebarTurns(turns,false,true).length',context),4);
+  assert.equal(vm.runInContext('sidebarTurns(turns,true,false).length',context),4);
+});

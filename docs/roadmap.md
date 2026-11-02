@@ -84,6 +84,35 @@ Next infrastructure steps belong to milestone 7, after model evaluation provides
 real operating requirements. Separate processes do not alone establish distributed
 microservice readiness or speaker accuracy.
 
+## Current playback and progress fixes
+
+- [ ] Show a compact tracker outside run settings, using real backend phases and native counters.
+- [ ] Offer verbose stage history, elapsed time and separate worker/model heartbeat information; no invented overall ETA.
+- [ ] Improve playback controls, seeking, volume and keyboard use without redesigning the restored interface.
+- [ ] Fix fullscreen sizing and standard/WebKit/native-video fullscreen entry and exit.
+- [ ] Hide detected turns shorter than one second in the review sidebar by default, with visible hidden count and optional inspection.
+- [ ] Preserve all turns in timelines, matching, corrections, saved profiles and JSON/CSV exports; do not hide manual reference clips.
+- [ ] Verify player paths, filtering and progress rendering; commit each meaningful step.
+
+## Future progressive and streaming diarization
+
+Final timestamp files remain the authoritative deliverable. Add progressive
+recording analysis before considering live meeting capture.
+
+- [ ] Separate progressive analysis of an uploaded file from true live microphone streaming and from ordinary video playback.
+- [ ] Introduce overlapping analysis chunks with original timestamps and checkpointed partial results.
+- [ ] Maintain speaker identities across chunks; do not independently rename anonymous clusters in each chunk.
+- [ ] Mark provisional labels explicitly and reconcile them before the final JSON/CSV export.
+- [ ] Preserve overlap at chunk boundaries; handle unknown and newly arriving voices.
+- [ ] Emit resumable job/result events (for example SSE) and expose which time range is actually analyzed.
+- [ ] Measure first-result latency, real-time factor, memory and final identity/overlap quality against the offline baseline.
+- [ ] Choose a stateful streaming-capable backend for true live input if measurements justify it; keep the offline baseline available.
+
+Playing a file does not mean the model can analyze at playback speed. The current
+Community-1 adapter produces a final batch result; progress events are not partial
+speaker results. Initial chunks may need later identity corrections. Playback
+must remain independent of processing speed and final-file generation.
+
 ## Milestone 3 — Make review and correction useful
 
 - [ ] Keep active turns and playhead synchronized without losing editing focus.
@@ -199,3 +228,7 @@ just a feature count or number of models.
   retaining the restored UI. Verified 86 Python and seven frontend tests, including
   streamed uploads, media ranges, worker isolation, atomic claims, crash recovery
   and supervised port replacement. Standalone service wheels build independently.
+
+- 2026-11-01: Added requested stage tracking/verbose details, player/fullscreen fixes
+  and a sub-one-second sidebar filter. Added progressive/streaming diarization as
+  future work, with final-file generation remaining authoritative.

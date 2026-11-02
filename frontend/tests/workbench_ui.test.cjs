@@ -10,6 +10,14 @@ function app() {
   for (const [, id] of fs.readFileSync(path.join(root, 'index.html'), 'utf8').matchAll(/id="([^"]+)"/g)) {
     elements.set(id, {
       value: '', hidden: true, open: false, textContent: '',
+      volume:1,muted:false,readyState:4,paused:true,currentTime:0,
+      style:{setProperty(){}},classList:{toggle(){}},
+      addEventListener(name,callback){this['on'+name]=callback;},
+      setAttribute(name,value){this[name]=value;},
+      removeAttribute(name){delete this[name];},
+      click(){return this.onclick?.();},
+      play(){this.paused=false;return Promise.resolve();},
+      pause(){this.paused=true;},
       focus() { this.focused = true; },
       scrollIntoView() { this.scrolled = true; },
       close() { this.open = false; },
@@ -120,4 +128,131 @@ test('Sidebar hides sub-second detections without changing source indices or out
   assert.equal(vm.runInContext('turns.length',context),4);
   assert.equal(vm.runInContext('sidebarTurns(turns,false,true).length',context),4);
   assert.equal(vm.runInContext('sidebarTurns(turns,true,false).length',context),4);
+});
+
+test('Tracker shows measured per-stage counts and keeps verbose details expanded', () => {
+  const {context,elements}=app();
+  vm.runInContext("state.data={worker:{ready:true}};var job={id:'job',kind:'identify',model:'community-1',status:'running',stage:'Extracting voice features',progress:{phase:'embeddings',completed:3,total:10,unit:'batches'},events:[]};renderJobTracker(job)",context);
+  assert.match(elements.get('job-track-count').textContent,/3 \/ 10 batches · 30% of this stage/);
+  assert.equal(elements.get('job-track-meter').value,3);
+  assert.equal(elements.get('job-track-meter').max,10);
+  elements.get('job-track-verbose').open=true;
+  vm.runInContext('job.progress.completed=4;renderJobTracker(job)',context);
+  assert.equal(elements.get('job-track-verbose').open,true);
+  assert.match(elements.get('job-track-steps').innerHTML,/aria-current="step"[^>]*>Voice features/);
+});
+
+test('Unmeasured stages stay indeterminate; terminal and unavailable workers do not animate progress', () => {
+  const {context,elements}=app();
+  vm.runInContext("state.data={worker:{ready:true}};var job={id:'job',model:'community-1',status:'running',stage:'Preparing model',progress:{phase:'model_loading'},events:[]};renderJobTracker(job)",context);
+  assert.equal(elements.get('job-track-meter').hidden,false);
+  assert.equal(elements.get('job-track-meter').value,undefined);
+  assert.match(elements.get('job-track-count').textContent,/no measured total/);
+  vm.runInContext("state.data.worker.ready=false;renderJobTracker(job)",context);
+  assert.equal(elements.get('job-track-meter').hidden,true);
+  assert.match(elements.get('job-track-count').textContent,/Worker unavailable/);
+  vm.runInContext("job.status='failed';job.error='Access denied';job.failed_stage='Preparing model';renderJobTracker(job)",context);
+  assert.equal(elements.get('job-track-meter').hidden,true);
+  assert.match(elements.get('job-track-count').textContent,/This run has stopped/);
+  assert.equal(elements.get('job-track-error').textContent,'Access denied');
+});
+
+test('A later run tracker labels an older saved result without changing it', () => {
+  const {context,elements}=app();
+  vm.runInContext("state.data={worker:{ready:true}};state.report={job_id:'older',segments:[{start:0,end:.5}]};renderJobTracker({id:'new',model:'community-1',status:'running',progress:{phase:'segmentation'}})",context);
+  assert.match(elements.get('job-track-context').textContent,/earlier saved result/);
+  assert.equal(vm.runInContext('state.report.segments.length',context),1);
+});
+
+test('Seek slider uses seconds for precise movement in long recordings', () => {
+  const {context,elements}=app();
+  vm.runInContext("state.media={role:'meeting',duration:7200}",context);
+  elements.get('player').duration=7200;
+  elements.get('seek-position').value='3600.125';
+  elements.get('seek-position').oninput();
+  assert.equal(elements.get('player').currentTime,3600.125);
+  elements.get('player').currentTime=4;
+  elements.get('skip-back').onclick();
+  assert.equal(elements.get('player').currentTime,0);
+});
+
+test('Mute and zero-volume recovery restore an audible level', () => {
+  const {context,elements}=app();
+  elements.get('player').volume=.4;
+  elements.get('mute-toggle').onclick();
+  assert.equal(elements.get('player').muted,true);
+  elements.get('mute-toggle').onclick();
+  assert.equal(elements.get('player').volume,.4);
+  elements.get('volume').value='0';elements.get('volume').oninput();
+  assert.equal(elements.get('player').muted,true);
+  elements.get('mute-toggle').onclick();
+  assert.equal(elements.get('player').muted,false);
+  assert.equal(elements.get('player').volume,.4);
+});
+
+test('Fullscreen targets the player shell and exits through the document API', async () => {
+  const {context,elements}=app();
+  vm.runInContext("state.media={video:true}",context);
+  let requested=0,exited=0;
+  elements.get('player-shell').requestFullscreen=async()=>{requested++;context.document.fullscreenElement=elements.get('player-shell');};
+  context.document.exitFullscreen=async()=>{exited++;context.document.fullscreenElement=null;};
+  await elements.get('fullscreen').onclick();
+  assert.equal(requested,1);
+  assert.equal(elements.get('fullscreen').textContent,'Exit fullscreen');
+  await elements.get('fullscreen').onclick();
+  assert.equal(exited,1);
+  assert.equal(elements.get('fullscreen').textContent,'Fullscreen');
+});
+
+test('Safari native-video fullscreen is a fallback, and native controls are restored on exit', async () => {
+  const {context,elements}=app();
+  vm.runInContext("state.media={video:true}",context);
+  let entered=0;
+  elements.get('player').webkitEnterFullscreen=()=>{entered++;};
+  await elements.get('fullscreen').onclick();
+  assert.equal(entered,1);
+  assert.equal(elements.get('player').controls,true);
+  elements.get('player').onwebkitendfullscreen();
+  assert.equal(elements.get('player').controls,false);
+  assert.equal(elements.get('fullscreen').textContent,'Fullscreen');
+});
+
+test('Fullscreen handles prefixed container APIs and blocked requests visibly', async () => {
+  const {context,elements}=app();
+  vm.runInContext("state.media={video:true}",context);
+  let called=0;
+  elements.get('player-shell').webkitRequestFullscreen=()=>{called++;};
+  await elements.get('fullscreen').onclick();
+  assert.equal(called,1);
+  elements.get('player-shell').webkitRequestFullscreen=()=>{throw new Error('Blocked');};
+  await elements.get('fullscreen').onclick();
+  assert.equal(elements.get('error-banner').hidden,false);
+  assert.match(elements.get('error-text').textContent,/Could not change fullscreen: Blocked/);
+});
+
+test('Native fullscreen is not marked active until the browser confirms entry', async () => {
+  const {context,elements}=app();
+  vm.runInContext("state.media={video:true}",context);
+  elements.get('player').webkitEnterFullscreen=()=>{};
+  await elements.get('fullscreen').onclick();
+  assert.equal(elements.get('fullscreen').textContent,'Fullscreen');
+  elements.get('player').onwebkitbeginfullscreen();
+  assert.equal(elements.get('fullscreen').textContent,'Exit fullscreen');
+});
+
+test('Legacy WebKit container fullscreen works even if the standard API is disabled', async () => {
+  const {context,elements}=app();
+  vm.runInContext("state.media={video:true};document.fullscreenEnabled=false;document.webkitFullscreenEnabled=true",context);
+  let entered=0;
+  elements.get('player-shell').webkitRequestFullScreen=()=>{entered++;};
+  await elements.get('fullscreen').onclick();
+  assert.equal(entered,1);
+});
+
+test('Heartbeat polling does not rebuild library controls or lose their focus', () => {
+  const {context}=app();
+  vm.runInContext("var first={media:[],collections:[],jobs:[{id:'j',status:'running',heartbeat_at:'before'}]};var second={media:[],collections:[],jobs:[{id:'j',status:'running',heartbeat_at:'after'}]}",context);
+  assert.equal(vm.runInContext('catalogViewSignature(first)===catalogViewSignature(second)',context),true);
+  vm.runInContext("second.jobs[0].status='completed'",context);
+  assert.equal(vm.runInContext('catalogViewSignature(first)===catalogViewSignature(second)',context),false);
 });
